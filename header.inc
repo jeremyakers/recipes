@@ -3,57 +3,97 @@
 session_name('recipes');
 session_start();
 
-// For MySQL uncomment below two lines:
-//   $dbh = mysql_connect ("localhost", "username", "password") or die ('I cannot connect to the database.');
-//   mysql_select_db("recipes") or die ('Error selecting database' . db_error());
+function db_connect()
+{
+   $host = getenv('RECIPES_DB_HOST');
+   if($host === false || $host === '')
+      $host = '127.0.0.1';
 
-//For Composite ODBC uncomment these lines:
-   $COMPOSITE_HOME="/opt/Composite_Software/CIS_6.2.0";
-   putenv("COMPOSITE_HOME=$COMPOSITE_HOME");
-   putenv("ODBCHOME=$COMPOSITE_HOME/apps/odbc64");
-   putenv("ODBCINI=$COMPOSITE_HOME/odbc.ini");
-   putenv("ODBCINSTINI=$COMPOSITE_HOME/odbcinst.ini");
-   $LD_LIBRARY_PATH = getenv("LD_LIBRARY_PATH");
-   putenv("LD_LIBRARY_PATH=$COMPOSITE_HOME/apps/odbc64/lib:$LD_LIBRARY_PATH");
-   $dbh = odbc_connect("recipes", "", "") or die('I cannot connect to the database:' . odbc_errormsg() . ': ' . odbc_error());
+   $port = getenv('RECIPES_DB_PORT');
+   if($port === false || $port === '')
+      $port = 3306;
 
+   $database = getenv('RECIPES_DB_NAME');
+   if($database === false || $database === '')
+      $database = 'recipes';
 
-include('../mobile_device_detect.php');
+   $username = getenv('RECIPES_DB_USER');
+   if($username === false || $username === '')
+      $username = 'root';
+
+   $password = getenv('RECIPES_DB_PASS');
+   if($password === false)
+      $password = '';
+
+   $connection = mysqli_connect($host, $username, $password, $database, (int)$port);
+   if(!$connection)
+      die('I cannot connect to the database: ' . mysqli_connect_error());
+
+   mysqli_set_charset($connection, 'utf8mb4');
+
+   return $connection;
+}
+
+$dbh = db_connect();
+
+if(file_exists('../mobile_device_detect.php'))
+   include('../mobile_device_detect.php');
+
 if(!isset($_SESSION['mobile']))
-   $_SESSION['mobile'] = mobile_device_detect(false,false,false,true,false,false);
+{
+   if(function_exists('mobile_device_detect'))
+      $_SESSION['mobile'] = mobile_device_detect(false,false,false,true,false,false);
+   else
+      $_SESSION['mobile'] = false;
+}
 
 $mobile = $_SESSION['mobile'];
 
 $formats = array("Wide", "Mobile");
 
 
-   function dbquery($query, $mydbh)
+   function db_normalize_query($query)
    {
-      global $dbh;
-      if(isset($mydbh))
-         $usedbh = $mydbh;
-      else
-         $usedbh = $dbh;
-      return odbc_exec($usedbh, $query);
-      //return mysql_query($query, $usedbh);
+      return str_replace(
+         array('"time"', '"size"', '"type"'),
+         array('`time`', '`size`', '`type`'),
+         $query
+      );
+   }
+
+   function dbquery($query, $mydbh = null)
+   {
+       global $dbh;
+       if(isset($mydbh))
+          $usedbh = $mydbh;
+       else
+          $usedbh = $dbh;
+      return mysqli_query($usedbh, db_normalize_query($query));
    }
 
    function db_fetch_array($result)
    {
-      return odbc_fetch_array($result);
-      //return mysql_fetch_array($result);
-      //return false;
+      return mysqli_fetch_assoc($result);
    }
 
-   function db_error($mydbh)
+   function db_error($mydbh = null)
    {
       global $dbh;
       if(isset($mydbh))
          $usedbh = $mydbh;
       else
          $usedbh = $dbh;
-      return odbc_error($usedbh);
-      //return mysql_error($usedbh);
+      return mysqli_error($usedbh);
+   }
+
+   function db_insert_id($mydbh = null)
+   {
+      global $dbh;
+      if(isset($mydbh))
+         $usedbh = $mydbh;
+      else
+         $usedbh = $dbh;
+      return mysqli_insert_id($usedbh);
    }
 
 
@@ -90,10 +130,10 @@ $formats = array("Wide", "Mobile");
    }
 
 
-   function print_unit_options($unit, $type)
+   function print_unit_options($unit = 6, $type = '')
    {
-      global $dbh;
-      if(!$unit)
+       global $dbh;
+       if(!$unit)
 	 $unit = 6;
       if(!empty($type))
          $where = "WHERE \"type\" = '$type'";
@@ -133,8 +173,8 @@ $formats = array("Wide", "Mobile");
 
    function find_count_mult($ingredient)
    {
-      global $dbh;
-      $query = "SELECT (\"size\" / units) count_mult FROM ingredients WHERE id = '$ingredient'";
+       global $dbh;
+      $query = "SELECT (`size` / units) count_mult FROM ingredients WHERE id = '$ingredient'";
       $result = dbquery($query, $dbh);
       $row = db_fetch_array($result);
       return $row['count_mult'];
@@ -142,8 +182,8 @@ $formats = array("Wide", "Mobile");
 
    function find_ingredient_data($ingredient)
    {
-      global $dbh;
-      $query = "SELECT MAX(name) name, MAX(\"size\") \"size\", MAX(cost) cost, ingredients.recipe ingredients_recipe, SUM(amount) sum_amount FROM ingredients INNER JOIN recipe_ingredients ON recipe_ingredients.recipe = ingredients.recipe WHERE id = '$ingredient' GROUP BY ingredients.recipe";
+       global $dbh;
+      $query = "SELECT MAX(name) name, MAX(`size`) `size`, MAX(cost) cost, ingredients.recipe ingredients_recipe, SUM(amount) sum_amount FROM ingredients INNER JOIN recipe_ingredients ON recipe_ingredients.recipe = ingredients.recipe WHERE id = '$ingredient' GROUP BY ingredients.recipe";
       $result = dbquery($query, $dbh);
       $row = db_fetch_array($result);
       return array($row['name'], $row['size'], $row['cost'], $row['ingredients_recipe'], $row['sum_amount']);
@@ -151,9 +191,14 @@ $formats = array("Wide", "Mobile");
 
    function print_ingredient_rows($recipeid, $edit, $recur, $ounces, $full, $display)
    {
-      global $dbh;
+       global $dbh;
       $total_oz = 0;
       $total_cost = 0;
+      $total_calories = 0;
+      $total_carbs = 0;
+      $total_fat = 0;
+      $total_protein = 0;
+      $total_fiber = 0;
       $count = 0;
 
       if($ounces > 0)
@@ -234,7 +279,7 @@ $formats = array("Wide", "Mobile");
 	 {
 	    echo "<TR><TD><B>-- Subtotal: " . round($total_oz, 1) . " ounces</B>$editblock<TD><B>$" . round($total_cost, 2) . "</B>$commentblock\n";
 	    echo "<TR><TD>$amount $sname <B><A HREF=\"showrecipe.php?recipeid=$recipe\">$iname:</A></B>$edittext<TD>--$commenttext\n";
-	    list($ounces, $cost, $icount, $calories, $carbs, $fat, $protein, $fiber) = print_ingredient_rows($recipe, $edit, $ingredient, $iamount, $display);
+	    list($ounces, $cost, $icount, $calories, $carbs, $fat, $protein, $fiber) = print_ingredient_rows($recipe, $edit, $ingredient, $iamount, $full, $display);
 	    echo "<TR><TD><B>-- Subtotal: " . round($ounces, 1) . " ounces</B>$editblock<TD><B>$" . round($cost, 2) . "</B>$commentblock\n";
 	    $total_oz += $ounces;
 	    $total_cost += $cost;
@@ -329,7 +374,8 @@ $formats = array("Wide", "Mobile");
 	 echo "<TH>Comment";
       list($total_oz, $total_cost, $count, $total_calories, $total_carbs, $total_fat, $total_protein, $total_fiber) = print_ingredient_rows($recipeid, $edit, false, 0, $full, $display);
       echo "</TABLE>";
-      echo "<br>Cost per ounce: $" . round($total_cost / $total_oz, 3);
+      if($total_oz > 0)
+         echo "<br>Cost per ounce: $" . round($total_cost / $total_oz, 3);
       return array($total_oz, $total_cost, $count, $total_calories, $total_carbs, $total_fat, $total_protein, $total_fiber);
    }
 
@@ -352,7 +398,9 @@ $formats = array("Wide", "Mobile");
 
    function print_ingredient_options($ingredients)
    {
-      global $dbh;
+       global $dbh;
+      if(!is_array($ingredients))
+         $ingredients = array();
       $count=0;
       $result = dbquery("SELECT id, name FROM ingredients ORDER BY name", $dbh);
       while($row = db_fetch_array($result))
