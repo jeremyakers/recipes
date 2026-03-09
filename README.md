@@ -8,7 +8,7 @@ Legacy PHP recipe management app.
 - View recipe details, ingredient lists, nutrition data, and instructions.
 - Create and edit recipes and ingredients.
 - Generate a simple ingredient price report.
-- Connect to the backing data source through ODBC.
+- Connect to a MySQL database through the shared `mysqli` bootstrap in `header.inc`.
 
 ## Project layout
 
@@ -20,25 +20,27 @@ Legacy PHP recipe management app.
 - `editrecipeingredients.php` - recipe ingredient editing flow
 - `pricereport.php` - ingredient cost update/report page
 - `header.inc` - shared session setup, database connection, and helper functions
-- `odbctest.php` - small ODBC connectivity test script
-- `listdsn.c`, `listtables.c` - local ODBC helper utilities
+- `odbctest.php` - simple database connectivity smoke test
+- `listdsn.c`, `listtables.c` - legacy ODBC helper utilities kept for reference
 
 ## Runtime notes
 
-- The app uses older PHP style, including short tags in some files.
-- Database access is routed through ODBC in `header.inc`.
-- The current configuration expects a local Composite Information Server ODBC install.
-- `header.inc` also includes `../mobile_device_detect.php`, which is not part of this repository.
+- The app now uses full `<?php` tags, so it does not depend on `short_open_tag`.
+- Database access is routed through `mysqli` in `header.inc`.
+- Database credentials come from environment variables.
+- `header.inc` can use `../mobile_device_detect.php` when present, but falls back cleanly if it is missing.
+- `editrecipe.php` uses FCKeditor when available and falls back to a plain `<textarea>` otherwise.
 
 ## Local setup
 
-1. Run the app in an environment with PHP and ODBC support enabled.
-2. Configure the expected ODBC driver and DSN for the `recipes` database.
-3. Make sure `mobile_device_detect.php` exists at the expected relative path, or update the include.
-4. Serve the directory with your PHP-capable web server.
+1. Run the app in an environment with PHP and the `mysqli` extension enabled.
+2. Set `RECIPES_DB_HOST`, `RECIPES_DB_PORT`, `RECIPES_DB_NAME`, `RECIPES_DB_USER`, and `RECIPES_DB_PASS` for your MySQL database.
+3. Optionally place `mobile_device_detect.php` at `../mobile_device_detect.php`.
+4. Optionally place FCKeditor at `../fckeditor/fckeditor.php`; otherwise recipe editing falls back to a normal textarea.
+5. Serve the directory with your PHP-capable web server.
 
 ## Notes for future cleanup
 
 - Input handling is currently inline and would benefit from validation and escaping improvements.
-- Database configuration is embedded in shared include code and should eventually move to environment-based configuration.
+- Database access still uses inline SQL and would benefit from prepared statements.
 - A modern setup guide and schema documentation still need to be added.
