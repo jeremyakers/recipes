@@ -1,0 +1,6 @@
+backup/
+*.zip
+nohup.out
+listdsn
+listtables
+*~
