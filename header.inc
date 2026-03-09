@@ -3,31 +3,53 @@
 session_name('recipes');
 session_start();
 
+$db_config = array();
+if(file_exists(__DIR__ . '/config.local.php'))
+   require __DIR__ . '/config.local.php';
+
+function db_env($names, $default = '')
+{
+   foreach($names as $name)
+   {
+      $value = getenv($name);
+      if($value !== false && $value !== '')
+         return $value;
+
+      if(isset($_ENV[$name]) && $_ENV[$name] !== '')
+         return $_ENV[$name];
+
+      if(isset($_SERVER[$name]) && $_SERVER[$name] !== '')
+         return $_SERVER[$name];
+   }
+
+   return $default;
+}
+
+function db_config_value($key, $env_names, $default = '')
+{
+   global $db_config;
+
+   if(isset($db_config[$key]) && $db_config[$key] !== '')
+      return $db_config[$key];
+
+   return db_env($env_names, $default);
+}
+
 function db_connect()
 {
-   $host = getenv('RECIPES_DB_HOST');
-   if($host === false || $host === '')
-      $host = '127.0.0.1';
+   $host = db_config_value('host', array('RECIPES_DB_HOST', 'DB_HOST', 'MYSQL_HOST'), '127.0.0.1');
+   $port = (int)db_config_value('port', array('RECIPES_DB_PORT', 'DB_PORT', 'MYSQL_PORT'), '3306');
+   $database = db_config_value('database', array('RECIPES_DB_NAME', 'DB_NAME', 'DB_DATABASE', 'MYSQL_DATABASE'), 'recipes');
+   $username = db_config_value('username', array('RECIPES_DB_USER', 'DB_USER', 'DB_USERNAME', 'MYSQL_USER'), 'root');
+   $password = db_config_value('password', array('RECIPES_DB_PASS', 'DB_PASS', 'DB_PASSWORD', 'MYSQL_PASSWORD'), '');
 
-   $port = getenv('RECIPES_DB_PORT');
-   if($port === false || $port === '')
-      $port = 3306;
-
-   $database = getenv('RECIPES_DB_NAME');
-   if($database === false || $database === '')
-      $database = 'recipes';
-
-   $username = getenv('RECIPES_DB_USER');
-   if($username === false || $username === '')
-      $username = 'root';
-
-   $password = getenv('RECIPES_DB_PASS');
-   if($password === false)
-      $password = '';
-
-   $connection = mysqli_connect($host, $username, $password, $database, (int)$port);
+   mysqli_report(MYSQLI_REPORT_OFF);
+   $connection = @mysqli_connect($host, $username, $password, $database, $port);
    if(!$connection)
-      die('I cannot connect to the database: ' . mysqli_connect_error());
+   {
+      $message = 'Database connection failed. Check config.local.php or RECIPES_DB_* (or DB_*/MYSQL_*) environment variables. MySQL said: ' . mysqli_connect_error();
+      die($message);
+   }
 
    mysqli_set_charset($connection, 'utf8mb4');
 
@@ -229,15 +251,23 @@ $formats = array("Wide", "Mobile");
       # IF multiplier AND NOT units.in_cup --> WEIGHT
       # IF NOT multiplier AND NOT units.in_cup --> COUNT
 
-      /*$query = "SELECT ingredient, ingredients.name, "
-	 . "IF(multiplier, IF(units.in_cup, ((recipe_ingredients.amount / units.in_cup) * ingredients.ounces_cup), (recipe_ingredients.amount * multiplier)), (recipe_ingredients.amount * (ingredients.size / ingredients.units))) AS ounces, "
-	 . "IF(multiplier, IF(units.in_cup, ((cost / size) * (recipe_ingredients.amount / units.in_cup) * ingredients.ounces_cup), (cost / size) * (recipe_ingredients.amount * multiplier)), (recipe_ingredients.amount * (cost / ingredients.units))) AS cost, "
-	 . "sname, multiplier, ingredients.recipe, recipes.name, recipe_ingredients.comment, amount, "
-	 . "ingredients.serving_size, ingredients.calories, ingredients.carbs, ingredients.fat, ingredients.protein, ingredients.fiber "
-	 . "FROM ingredients, recipe_ingredients, units, recipes "
-	 . "WHERE recipe_ingredients.recipe = $recipeid AND recipes.id = recipe_ingredients.recipe AND ingredients.id = recipe_ingredients.ingredient AND units.id = recipe_ingredients.unit "
-	 . "ORDER BY ingredients.recipe, pos"; */
-      $query = "SELECT ingredient, name, ounces, cost, sname, multiplier, ingredient_recipe, recipe_name, comment, amount, serving_size, calories, carbs, fat, protein, fiber FROM v_recipe_ingredients WHERE recipe = $recipeid";
+      $query = "SELECT "
+	 . "recipe_ingredients.ingredient ingredient, ingredients.name name, "
+	 . "IF(units.multiplier, "
+	 . "IF(units.in_cup, ((recipe_ingredients.amount / units.in_cup) * ingredients.ounces_cup), (recipe_ingredients.amount * units.multiplier)), "
+	 . "(recipe_ingredients.amount * (ingredients.`size` / ingredients.units))" 
+	 . ") AS ounces, "
+	 . "IF(units.multiplier, "
+	 . "IF(units.in_cup, ((ingredients.cost / ingredients.`size`) * (recipe_ingredients.amount / units.in_cup) * ingredients.ounces_cup), (ingredients.cost / ingredients.`size`) * (recipe_ingredients.amount * units.multiplier)), "
+	 . "(recipe_ingredients.amount * (ingredients.cost / ingredients.units))" 
+	 . ") AS cost, "
+	 . "units.sname sname, units.multiplier multiplier, ingredients.recipe ingredient_recipe, recipe_ingredients.comment comment, recipe_ingredients.amount amount, "
+	 . "ingredients.serving_size serving_size, ingredients.calories calories, ingredients.carbs carbs, ingredients.fat fat, ingredients.protein protein, ingredients.fiber fiber "
+	 . "FROM recipe_ingredients "
+	 . "INNER JOIN ingredients ON ingredients.id = recipe_ingredients.ingredient "
+	 . "INNER JOIN units ON units.id = recipe_ingredients.unit "
+	 . "WHERE recipe_ingredients.recipe = $recipeid "
+	 . "ORDER BY ingredients.recipe, recipe_ingredients.pos";
       $result = dbquery($query, $dbh) or die("Error with query: " . db_error());
       while(($row = db_fetch_array($result)))
       {
@@ -250,7 +280,6 @@ $formats = array("Wide", "Mobile");
 	    $sname = "";
 	 $mult = $row['multiplier'];
 	 $recipe = $row['ingredient_recipe'];
-	 $rname = $row['recipe_name'];
 	 $comment = $row['comment'];
 	 $amount = $row['amount'];
 	 $servsize = $row['serving_size'];
@@ -295,7 +324,10 @@ $formats = array("Wide", "Mobile");
 	    $amount = round($amount * $portion_mult, 2);
        $cost = round($icost * $portion_mult, 2);
 	    $grams = ($iamount * $portion_mult) * 28.3495231;
-	    $servings = ($grams / $servsize);
+            if($servsize > 0)
+               $servings = ($grams / $servsize);
+            else
+               $servings = 0;
        $total_oz += ($iamount * $portion_mult);
 	    $total_cost += ($icost * $portion_mult);
 	    $total_calories += $calories * $servings;
@@ -319,7 +351,10 @@ $formats = array("Wide", "Mobile");
           $statistic = $calories * $servings;
           break;
        case 4:
-          $statistic = ($calories * $servings) / $grams;
+          if($grams > 0)
+             $statistic = ($calories * $servings) / $grams;
+          else
+             $statistic = 0;
           break;
 
        }
