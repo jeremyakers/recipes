@@ -1,6 +1,5 @@
 <?php
    require "header.inc";
-   include_once("../fckeditor/fckeditor.php");
 
 
    if(isset($_POST['recipeid']))
@@ -124,40 +123,57 @@
 
    function myPageLoad()
    {
-      var elementId = '<?echo $scrollto;?>';
+      var elementId = '<?php echo $scrollto;?>';
       if(elementId)
       {
     window.scroll(0,findPos(document.getElementById(elementId)));
     document.getElementById(elementId).focus();
       }
       else
-    document.form1.name.focus();
-      //window.scroll(0,findPos(document.getElementById('<?echo $scrollto;?>')));
+         document.getElementById('ingredient').focus();
+      //window.scroll(0,findPos(document.getElementById('<?php echo $scrollto;?>')));
    }
 </script>
 </HEAD>
 <BODY onLoad="javascript:myPageLoad()">
-<H2><CENTER>Editing ingredients for recipe: <? echo "$name" ?></CENTER></H2>
+<H2><CENTER>Editing ingredients for recipe: <?php echo "$name" ?></CENTER></H2>
 <A HREF="index.php">&gt; Back to Search Page &lt;</A><BR>
 <BR>
-<A HREF="editrecipe.php?recipeid=<? echo $recipeid;?>">&gt; Back to Recipe Editor &lt;</A><BR>
+<A HREF="editrecipe.php?recipeid=<?php echo $recipeid;?>">&gt; Back to Recipe Editor &lt;</A><BR>
 <P>
 <?php echo $instructions; ?>
 <P>
-<? list($total_oz, $total_cost, $count, $total_calories, $total_carbs, $total_fat, $total_protein, $total_fiber) = print_ingredients($recipeid, true, true, $idisplay); ?><br><br>
-<?
-   $oz_serving = round($total_oz / $servings, 1);
-   $g_serving = round($total_oz * 28.3495231 / $servings, 1);
-   $ed = round($total_calories / ($total_oz * 28.3495231), 2);
-   $calories = round($total_calories / $servings, 1);
-   $carbs = round($total_carbs / $servings, 1);
-   $fat = round($total_fat / $servings, 1);
-   $protein = round($total_protein / $servings, 1);
-   $fiber = round($total_fiber / $servings, 1);
+<?php list($total_oz, $total_cost, $count, $total_calories, $total_carbs, $total_fat, $total_protein, $total_fiber) = print_ingredients($recipeid, true, true, $idisplay); ?><br><br>
+<?php
+   if($servings > 0)
+   {
+      $oz_serving = round($total_oz / $servings, 1);
+      $g_serving = round($total_oz * 28.3495231 / $servings, 1);
+      $calories = round($total_calories / $servings, 1);
+      $carbs = round($total_carbs / $servings, 1);
+      $fat = round($total_fat / $servings, 1);
+      $protein = round($total_protein / $servings, 1);
+      $fiber = round($total_fiber / $servings, 1);
+   }
+   else
+   {
+      $oz_serving = 0;
+      $g_serving = 0;
+      $calories = 0;
+      $carbs = 0;
+      $fat = 0;
+      $protein = 0;
+      $fiber = 0;
+   }
+
+   if($total_oz > 0)
+      $ed = round($total_calories / ($total_oz * 28.3495231), 2);
+   else
+      $ed = 0;
 ?>
 <TABLE cellpadding=1 cellspacing=0 border=1>
 <TR><TH>g(oz)/serving<TH>Calories<TH>Energy Density<TH>Carbs<TH>Fat<TH>Protein<TH>Fiber
-<TR><TD><?echo "$g_serving ($oz_serving)";?><TD><?echo $calories?><TD><?echo $ed?><TD><?echo $carbs?><TD><?echo $fat?><TD><?echo $protein?><TD><?echo $fiber?>
+<TR><TD><?php echo "$g_serving ($oz_serving)";?><TD><?php echo $calories?><TD><?php echo $ed?><TD><?php echo $carbs?><TD><?php echo $fat?><TD><?php echo $protein?><TD><?php echo $fiber?>
 </TABLE>
 
 <H3>Add ingredients:</H3>
@@ -165,10 +181,10 @@
 <TABLE>
 <FORM NAME="form2" METHOD="POST" onSubmit="javascript:saveScrollTo('form2', 'ingredient')">
 <INPUT TYPE="HIDDEN" NAME="scrollto">
-<INPUT TYPE="HIDDEN" NAME="recipeid" VALUE="<?echo $recipeid?>">
-<INPUT TYPE="HIDDEN" NAME="count" VALUE="<?echo $count?>">
+<INPUT TYPE="HIDDEN" NAME="recipeid" VALUE="<?php echo $recipeid?>">
+<INPUT TYPE="HIDDEN" NAME="count" VALUE="<?php echo $count?>">
 <TR><TD>Amount:<TD>Unit:<TD>Ingredient:<TD>Comment:
-<TR><TD><INPUT TYPE="TEXT" NAME="amount" ID="ingredient" SIZE="5"><TD><SELECT NAME="unit"><? print_unit_options("") ?></SELECT> of <TD><input type="text" name="searchterm" id="searchterm" />
+<TR><TD><INPUT TYPE="TEXT" NAME="amount" ID="ingredient" SIZE="5"><TD><SELECT NAME="unit"><?php print_unit_options("") ?></SELECT> of <TD><input type="text" name="searchterm" id="searchterm" />
 <div id="hint"></div>
    <script type="text/javascript">
       new Ajax.Autocompleter("searchterm","hint","server.php");
@@ -176,9 +192,8 @@
 <TD><INPUT TYPE="TEXT" NAME="comment">
 <TR><TD colspan="2"><INPUT TYPE="SUBMIT" NAME="addingredient" ID="addingredient" VALUE="Add Ingredient"><BR>
 <TR><TD>&nbsp;
-<TR><TD colspan="2"><A HREF="editingredient.php?returnrecipe=<?echo $recipeid?>">&gt; New ingredient &lt;</A>
+<TR><TD colspan="2"><A HREF="editingredient.php?returnrecipe=<?php echo $recipeid?>">&gt; New ingredient &lt;</A>
 </FORM>
 </TABLE>
 </BODY>
 </HTML>
-

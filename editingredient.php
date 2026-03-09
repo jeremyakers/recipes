@@ -1,5 +1,21 @@
 <?php
    require "header.inc";
+
+   $name = "";
+   $size = "";
+   $cost = "";
+   $units = "";
+   $recipe = 0;
+   $serving_size = "";
+   $calories = "";
+   $carbs = "";
+   $fat = "";
+   $protein = "";
+   $fiber = "";
+   $ounces_cup = "";
+   $nametext = "";
+   $ndtext = "";
+   $voltext = "";
    
    if(isset($_POST['ingredientid']))
       $ingredientid = $_POST['ingredientid'];
@@ -105,11 +121,11 @@
 
       if(!$ingredientid)
       {
-	 $query = "INSERT INTO ingredients (name, \"size\", cost, units, recipe, serving_size, calories, carbs, fat, protein, fiber, ounces_cup) VALUES ('$dbname', '$size', '$cost', '$units', '$recipe', '$serving_size', '$calories', '$carbs', '$fat', '$protein', '$fiber', '$ounces_cup')";
+	 $query = "INSERT INTO ingredients (name, `size`, cost, units, recipe, serving_size, calories, carbs, fat, protein, fiber, ounces_cup) VALUES ('$dbname', '$size', '$cost', '$units', '$recipe', '$serving_size', '$calories', '$carbs', '$fat', '$protein', '$fiber', '$ounces_cup')";
       }
       else
       {
-	 $query = "UPDATE ingredients SET name = '$dbname', \"size\" = '$size', cost = '$cost', units = '$units', recipe = '$recipe', serving_size = '$serving_size', calories = '$calories', carbs = '$carbs', fat = '$fat', protein = '$protein', fiber = '$fiber', ounces_cup = '$ounces_cup' WHERE id = '$ingredientid'";
+	 $query = "UPDATE ingredients SET name = '$dbname', `size` = '$size', cost = '$cost', units = '$units', recipe = '$recipe', serving_size = '$serving_size', calories = '$calories', carbs = '$carbs', fat = '$fat', protein = '$protein', fiber = '$fiber', ounces_cup = '$ounces_cup' WHERE id = '$ingredientid'";
       }
 
       dbquery($query, $dbh) or die("Error updating records: " . db_error($dbh) . "<BR>Query: $query");
@@ -120,7 +136,7 @@
       echo "<INPUT TYPE=\"HIDDEN\" NAME=\"format_select\" VALUE=\"$format_select\"><INPUT TYPE=\"HIDDEN\" NAME=\"recipe_search\" VALUE=\"$recipe_search\"><INPUT TYPE=\"HIDDEN\" NAME=\"search\" VALUE=\"$search\"><INPUT TYPE='Submit' NAME='new' VALUE='Add another'></FORM>";
       if(!$ingredientid)
       {
-	 $ingredientid = mysql_insert_id();
+	 $ingredientid = db_insert_id($dbh);
       }
       $edit = 1;
    }
@@ -134,7 +150,7 @@
          exit;
       }
 
-      $result = dbquery("SELECT name, \"size\", cost, recipe, serving_size, calories, carbs, fat, protein, fiber, units, ounces_cup FROM ingredients WHERE id = '$ingredientid'", $dbh) or die("Error in query: " . db_error($dbh));
+      $result = dbquery("SELECT name, `size`, cost, recipe, serving_size, calories, carbs, fat, protein, fiber, units, ounces_cup FROM ingredients WHERE id = '$ingredientid'", $dbh) or die("Error in query: " . db_error($dbh));
       if(!$result || !($row = db_fetch_array($result)))
       {
          echo "Ingredient not found: $ingredientid";
@@ -255,8 +271,8 @@
       {
 ?>
 <TABLE cellpadding=1 cellspacing=0 border=1>
-<?
-         foreach($matches[1] as $url)
+<?php
+          foreach($matches[1] as $url)
          {
             $url = 'http://www.nutritiondata.com' . $url;
             echo '<tr><td><form method="post"><INPUT TYPE="HIDDEN" NAME="ingredientid" VALUE="' . $ingredientid . '"><input type="hidden" name="ndurl" value="' . $url . '"><input type="submit" name="ndcopy" value="Copy"><td><a href="' . $url . '">' . $matches[2][$i] . "</a></form>\n";
@@ -264,7 +280,7 @@
          }
 ?>
 </table>
-<?
+<?php
       }
       else
          echo 'No matches found at: <a href="http://www.nutritiondata.com/foods-' . $ndname . '000000000000000000000.html">http://www.nutritiondata.com/foods-' . $ndname . '000000000000000000000.html<br>';
@@ -279,8 +295,8 @@
 </script>
 </HEAD>
 <BODY onload="document.form1.name.focus()">
-<H2><CENTER>Editing ingredient: <? echo "$name" ?></CENTER></H2>
-<?      
+<H2><CENTER>Editing ingredient: <?php echo "$name" ?></CENTER></H2>
+<?php
    if($returnrecipe)
    {
       echo "<A HREF='editrecipe.php?recipeid=$returnrecipe&scrollto=ingredient'>&gt; Return to recipe's editor &lt;</A><BR>";
@@ -291,29 +307,29 @@
 ?>
 <P>
 <FORM NAME="ndform" METHOD="POST">
-<INPUT TYPE="HIDDEN" NAME="ingredientid" VALUE="<?echo $ingredientid?>">
-Copy nutrition data from: <INPUT TYPE="TEXT" NAME="ndurl" VALUE="<?echo $ndurl?>" ID="name" SIZE=70>
+<INPUT TYPE="HIDDEN" NAME="ingredientid" VALUE="<?php echo $ingredientid?>">
+Copy nutrition data from: <INPUT TYPE="TEXT" NAME="ndurl" VALUE="<?php echo $ndurl?>" ID="name" SIZE=70>
 <INPUT TYPE="SUBMIT" NAME="ndcopy" VALUE="Copy">
 </FORM>
 <FORM NAME="form1" METHOD="POST">
    <TABLE>
-   <TR><TD>Name:            <TD><INPUT TYPE="TEXT" NAME="name" VALUE="<?echo $name?>" ID="name" SIZE=70> <?echo $nametext?>
+   <TR><TD>Name:            <TD><INPUT TYPE="TEXT" NAME="name" VALUE="<?php echo $name?>" ID="name" SIZE=70> <?php echo $nametext?>
    <TR><TD>                 <TD><INPUT TYPE="SUBMIT" NAME="ndlookup" VALUE="Look up on nutritiondata.com"> <!--onClick="javascript:window.open('http://www.nutritiondata.com/foods-' + escape(document.form1.name.value) + '000000000000000000000.html','blank','')">-->
-   <TR><TD>Size:            <TD><INPUT TYPE="TEXT" NAME="size" VALUE="<?echo $size?>"><SELECT NAME="unit"><? print_unit_options(2); ?></SELECT>
-   <TR><TD>Cost:            <TD><INPUT TYPE="TEXT" NAME="cost" VALUE="<?echo $cost?>">
-   <TR><TD>Units/container: <TD><INPUT TYPE="TEXT" NAME="units" VALUE="<?echo $units?>">
+   <TR><TD>Size:            <TD><INPUT TYPE="TEXT" NAME="size" VALUE="<?php echo $size?>"><SELECT NAME="unit"><?php print_unit_options(2); ?></SELECT>
+   <TR><TD>Cost:            <TD><INPUT TYPE="TEXT" NAME="cost" VALUE="<?php echo $cost?>">
+   <TR><TD>Units/container: <TD><INPUT TYPE="TEXT" NAME="units" VALUE="<?php echo $units?>">
    <TR><TD>Nutrition Facts: <TD><HR>
-   <TR><TD>Serving Size:    <TD><INPUT TYPE="TEXT" NAME="serving_size" VALUE="<?echo $serving_size?>"> grams (or milliliters) <?echo $ndtext?>
-   <TR><TD>Volume:          <TD><INPUT TYPE="TEXT" NAME="ounces_cup" VALUE="<?echo $ounces_cup?>"><SELECT NAME="weight_select"><?print_weight_options();?></SELECT> per <SELECT NAME="volume_select"><?print_volume_options();?></SELECT> <?echo $voltext?>
-   <TR><TD>Calories:        <TD><INPUT TYPE="TEXT" NAME="calories" VALUE="<?echo $calories?>"> <?echo $ndtext?>
-   <TR><TD>Carbs:           <TD><INPUT TYPE="TEXT" NAME="carbs" VALUE="<?echo $carbs?>"> <?echo $ndtext?>
-   <TR><TD>Fat:             <TD><INPUT TYPE="TEXT" NAME="fat" VALUE="<?echo $fat?>"> <?echo $ndtext?>
-   <TR><TD>Protein:         <TD><INPUT TYPE="TEXT" NAME="protein" VALUE="<?echo $protein?>"> <?echo $ndtext?>
-   <TR><TD>Fiber:           <TD><INPUT TYPE="TEXT" NAME="fiber" VALUE="<?echo $fiber?>"> <?echo $ndtext?>
-   <TR><TD>Recipe:          <TD><SELECT NAME="recipe"><OPTION VALUE="0">None<? print_recipe_options($recipe); ?></SELECT>
+   <TR><TD>Serving Size:    <TD><INPUT TYPE="TEXT" NAME="serving_size" VALUE="<?php echo $serving_size?>"> grams (or milliliters) <?php echo $ndtext?>
+   <TR><TD>Volume:          <TD><INPUT TYPE="TEXT" NAME="ounces_cup" VALUE="<?php echo $ounces_cup?>"><SELECT NAME="weight_select"><?php print_weight_options();?></SELECT> per <SELECT NAME="volume_select"><?php print_volume_options();?></SELECT> <?php echo $voltext?>
+   <TR><TD>Calories:        <TD><INPUT TYPE="TEXT" NAME="calories" VALUE="<?php echo $calories?>"> <?php echo $ndtext?>
+   <TR><TD>Carbs:           <TD><INPUT TYPE="TEXT" NAME="carbs" VALUE="<?php echo $carbs?>"> <?php echo $ndtext?>
+   <TR><TD>Fat:             <TD><INPUT TYPE="TEXT" NAME="fat" VALUE="<?php echo $fat?>"> <?php echo $ndtext?>
+   <TR><TD>Protein:         <TD><INPUT TYPE="TEXT" NAME="protein" VALUE="<?php echo $protein?>"> <?php echo $ndtext?>
+   <TR><TD>Fiber:           <TD><INPUT TYPE="TEXT" NAME="fiber" VALUE="<?php echo $fiber?>"> <?php echo $ndtext?>
+   <TR><TD>Recipe:          <TD><SELECT NAME="recipe"><OPTION VALUE="0">None<?php print_recipe_options($recipe); ?></SELECT>
 </TABLE></p>
-<? if($returnrecipe) echo "<INPUT TYPE=\"HIDDEN\" NAME=\"returnrecipe\" VALUE=\"$returnrecipe\">"; ?>
-<INPUT TYPE="HIDDEN" NAME="ingredientid" VALUE="<?echo $ingredientid?>">
+<?php if($returnrecipe) echo "<INPUT TYPE=\"HIDDEN\" NAME=\"returnrecipe\" VALUE=\"$returnrecipe\">"; ?>
+<INPUT TYPE="HIDDEN" NAME="ingredientid" VALUE="<?php echo $ingredientid?>">
 <INPUT TYPE="SUBMIT" NAME="save" VALUE="Save"><BR>
 <BR>
 <SELECT NAME="deleteconfirm"><OPTION VALUE="0">Delete?<OPTION VALUE="1">No<OPTION VALUE="2">Yes</SELECT>
