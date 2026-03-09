@@ -1,24 +1,24 @@
-<? 
+<?php 
 include "header.inc";
+
+$sort = isset($_SESSION['sort']) ? $_SESSION['sort'] : "";
+$sort_order = isset($_SESSION['sort_order']) ? $_SESSION['sort_order'] : "";
 
 if(isset($_GET['sort']))
 {
-   if($_SESSION['sort'] == $_GET['sort'] && (!isset($_SESSION['sort_order']) || $_SESSION['sort_order'] == "ASC"))
+   if($sort == $_GET['sort'] && ($sort_order == "" || $sort_order == "ASC"))
       $_SESSION['sort_order'] = "DESC";
    else
    {
       $_SESSION['sort_order'] = "ASC";
       $_SESSION['sort'] = $_GET['sort'];
    }
+
+   $sort = $_SESSION['sort'];
+   $sort_order = $_SESSION['sort_order'];
 }
 else
 {
-   $sort = "";
-   $sort_order = "";
-   if(isset($_SESSION['sort']))
-      $sort = $_SESSION['sort'];
-   if(isset($_SESSION['sort_order']))
-      $sort_order = $_SESSION['sort_order'];
 }
 
 if(isset($_GET['adv_search']))
@@ -41,12 +41,12 @@ if(isset($_GET['recipe_search']))
 if(isset($_GET['category_select']))
    $_SESSION['category_select'] = $_GET['category_select'];
 
-$format = $_SESSION['format_select'];
-$search = $_SESSION['search'];
-$recipe = $_SESSION['recipe_search'];
-$category = $_SESSION['category_select'];
+$format = isset($_SESSION['format_select']) ? $_SESSION['format_select'] : "";
+$search = isset($_SESSION['search']) ? $_SESSION['search'] : "";
+$recipe = isset($_SESSION['recipe_search']) ? $_SESSION['recipe_search'] : "";
+$category = isset($_SESSION['category_select']) ? $_SESSION['category_select'] : 0;
 $dbsort_order = addslashes($sort_order);
-$adv_search = $_SESSION['adv_search'];
+$adv_search = isset($_SESSION['adv_search']) ? $_SESSION['adv_search'] : 0;
 
 if(!$sort)
    $sort = "mycategory";
@@ -58,31 +58,31 @@ $dbsort = addslashes($sort);
 <FORM METHOD="GET">
 <TABLE>
    <TR><TD>Format: <TD><SELECT NAME="format_select">
-   <? print_format_options($format); ?>
+   <?php print_format_options($format); ?>
    </SELECT>
    <TR><TD>Category:<TD><SELECT NAME="category_select">
    <OPTION VALUE="0">All
-<? print_category_options($category);   ?>
+<?php print_category_options($category);   ?>
    </SELECT>
-   <TR><TD>Recipe name:<BR>(Leave blank for all)<TD><INPUT TYPE="TEXT" NAME="recipe_search" VALUE="<? echo $recipe;?>">
-<? if(!$adv_search) { ?>
+   <TR><TD>Recipe name:<BR>(Leave blank for all)<TD><INPUT TYPE="TEXT" NAME="recipe_search" VALUE="<?php echo $recipe;?>">
+<?php if(!$adv_search) { ?>
 </TABLE>
 <A HREF="index.php?adv_search=1">More options &gt;&gt;&gt;</A><BR>
-<? } else { ?>
-<TR><TD>Ingredients:<TD> <SELECT MULTIPLE NAME="ingredients[]"><? print_ingredient_options($_GET['ingredients']); ?></SELECT>
+<?php } else { ?>
+<TR><TD>Ingredients:<TD> <SELECT MULTIPLE NAME="ingredients[]"><?php print_ingredient_options(isset($_GET['ingredients']) ? $_GET['ingredients'] : array()); ?></SELECT>
 </TABLE>
 <A HREF="index.php?adv_search=0">&lt;&lt;&lt; Basic search</A><BR>
-<? } ?>
+<?php } ?>
    <INPUT TYPE="SUBMIT" NAME="search" VALUE="Search"><BR>
 </FORM><BR>
 <FORM ACTION="editrecipe.php" METHOD="POST">
-<INPUT TYPE="HIDDEN" NAME="format_select" VALUE="<?echo $format;?>">
-<INPUT TYPE="HIDDEN" NAME="category_select" VALUE="<?echo $category;?>">
-<INPUT TYPE="HIDDEN" NAME="recipe_search" VALUE="<?echo $recipe;?>">
+<INPUT TYPE="HIDDEN" NAME="format_select" VALUE="<?php echo $format;?>">
+<INPUT TYPE="HIDDEN" NAME="category_select" VALUE="<?php echo $category;?>">
+<INPUT TYPE="HIDDEN" NAME="recipe_search" VALUE="<?php echo $recipe;?>">
 <INPUT TYPE="SUBMIT" NAME="new" VALUE="New Recipe"><BR>
 </FORM><BR>
 <A HREF="ingredients.php">&gt; Search Ingredients &lt;</A><BR>
-<?
+<?php
 if($category > 0)
    $cat_search = "AND category = '$category'";
 else

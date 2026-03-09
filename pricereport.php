@@ -1,7 +1,7 @@
 <HTML>
 <HEAD><TITLE>Ingredient Price List</TITLE></HEAD>
 <BODY>
-<?
+<?php
 
 include "header.inc";
 
@@ -12,13 +12,13 @@ if(isset($_POST['update']))
       $size = $_POST['size'][$id];
       $cost = $_POST['cost'][$id];
 
-      $query = "UPDATE ingredients SET \"size\" = '$size', cost = '$cost' WHERE id = '$id'";
+       $query = "UPDATE ingredients SET `size` = '$size', cost = '$cost' WHERE id = '$id'";
       dbquery($query, $dbh) or die("Error updating ingredients: " . db_error() . "<br>Query was: " . $query);
       echo "Updated successfully.<BR>";
    }
 }
 
-$query = "SELECT id, name, \"size\", cost FROM ingredients WHERE cost = 0";
+$query = "SELECT id, name, `size`, cost FROM ingredients WHERE cost = 0";
 $result = dbquery($query, $dbh) or die("Error searching for ingredients: " . db_error() . "<br>Query was: " . $query);
 if(!$result)
 {
@@ -29,7 +29,7 @@ if(!$result)
 <FORM METHOD="POST">
 <TABLE CELLPADDING=10 CELLSPACING=3 BORDER=1>
 <tr><td>Name</td><td>Size in ounces</td><TD>Cost in dollars</TD>
-<?
+<?php
       while($row = db_fetch_array($result))
       {
 	 $id = $row['id'];

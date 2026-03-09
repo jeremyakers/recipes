@@ -1,4 +1,4 @@
-<? include "header.inc"; 
+<?php include "header.inc"; 
 
    if(isset($_GET['recipeid']))
      $recipe = $_GET['recipeid'];
@@ -8,7 +8,7 @@
       exit;
    }
 
-   $query = "SELECT recipes.id, category category_id, categories.name category_name, recipes.name recipe_name, \"time\", servings, calories, energy_density, carbs, fat, protein, fiber, instructions FROM recipes INNER JOIN categories ON recipes.category = categories.id WHERE recipes.id = $recipe";
+   $query = "SELECT recipes.id, category category_id, categories.name category_name, recipes.name recipe_name, `time`, servings, calories, energy_density, carbs, fat, protein, fiber, instructions FROM recipes INNER JOIN categories ON recipes.category = categories.id WHERE recipes.id = $recipe";
    $result = dbquery($query, $dbh);
    if(!$result || !($row = db_fetch_array($result)))
    {
@@ -30,23 +30,23 @@
 ?>
 
 <HTML>
-<HEAD><TITLE>Recipe Details for: <? echo $name; ?></TITLE></HEAD>
+<HEAD><TITLE>Recipe Details for: <?php echo $name; ?></TITLE></HEAD>
 <BODY>
-<H3><? echo $name; ?></H3><BR>
+<H3><?php echo $name; ?></H3><BR>
 <TABLE>
-<TR><TD>Time (minutes):<TD><? echo $time; ?>
-<TR><TD>Servings:<TD><? echo $servings; ?>
-<TR><TD>Calories:<TD><? echo $calories; ?>
-<TR><TD>Energy density:<TD><? echo $ed; ?>
-<TR><TD>Carbs:<TD><? echo $carbs; ?>
-<TR><TD>Fat:<TD><? echo $fat; ?>
-<TR><TD>Protein:<TD><? echo $protein; ?>
-<TR><TD>Fiber:<TD><? echo $fiber; ?>
+<TR><TD>Time (minutes):<TD><?php echo $time; ?>
+<TR><TD>Servings:<TD><?php echo $servings; ?>
+<TR><TD>Calories:<TD><?php echo $calories; ?>
+<TR><TD>Energy density:<TD><?php echo $ed; ?>
+<TR><TD>Carbs:<TD><?php echo $carbs; ?>
+<TR><TD>Fat:<TD><?php echo $fat; ?>
+<TR><TD>Protein:<TD><?php echo $protein; ?>
+<TR><TD>Fiber:<TD><?php echo $fiber; ?>
 </TABLE>
 <BR>
-<FORM ACTION="editrecipe.php" METHOD="POST"><INPUT TYPE="HIDDEN" NAME="recipeid" VALUE="<?echo $recipe?>"><INPUT TYPE="SUBMIT" NAME="edit" VALUE="Edit this recipe"></FORM>
-<? print_ingredients($recipe, false, true); ?>
+<FORM ACTION="editrecipe.php" METHOD="POST"><INPUT TYPE="HIDDEN" NAME="recipeid" VALUE="<?php echo $recipe?>"><INPUT TYPE="SUBMIT" NAME="edit" VALUE="Edit this recipe"></FORM>
+<?php print_ingredients($recipe, false, true, 0); ?>
 <H3>Instructions</H3>
-<? echo $instructions;?>
+<?php echo $instructions;?>
 </BODY>
 </HTML>

@@ -3,7 +3,7 @@
 <TITLE>Get Data From nutritiondata.com</TITLE>
 </HEAD>
 <BODY>
-<?
+<?php
 if(isset($_GET['url']))
    $url = $_GET['url'];
 else
@@ -38,7 +38,7 @@ if($url)
 }
 ?>
 <FORM METHOD="GET">
-<INPUT TYPE="TEXT" NAME="url" SIZE=100 VALUE="<?echo $url?>"><BR>
+<INPUT TYPE="TEXT" NAME="url" SIZE=100 VALUE="<?php echo $url?>"><BR>
 <INPUT TYPE="SUBMIT" NAME="submit" VALUE="Submit">
 </BODY>
 </HTML>

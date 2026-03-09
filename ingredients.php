@@ -1,13 +1,18 @@
-<? include "header.inc";
+<?php include "header.inc";
+   $sort = isset($_SESSION['sort']) ? $_SESSION['sort'] : "";
+   $sort_order = isset($_SESSION['sort_order']) ? $_SESSION['sort_order'] : "";
    if(isset($_GET['sort']))
    {
-      if($_SESSION['sort'] == $_GET['sort'] && (!isset($_SESSION['sort_order']) || $_SESSION['sort_order'] == "ASC"))
+      if($sort == $_GET['sort'] && ($sort_order == "" || $sort_order == "ASC"))
          $_SESSION['sort_order'] = "DESC";
       else
       {
          $_SESSION['sort_order'] = "ASC";
          $_SESSION['sort'] = $_GET['sort'];
       }
+
+      $sort = $_SESSION['sort'];
+      $sort_order = $_SESSION['sort_order'];
    }
 
    if(isset($_GET['format_select']))
@@ -17,11 +22,11 @@
    if(isset($_GET['ingredient_search']))
       $_SESSION['ingredient_search'] = $_GET['ingredient_search'];
 
-   $format = $_SESSION['format_select'];
-   $search = $_SESSION['search'];
-   $ingredient = $_SESSION['ingredient_search'];
-   $sort = $_SESSION['sort'];
-   $sort_order = $_SESSION['sort_order'];
+   $format = isset($_SESSION['format_select']) ? $_SESSION['format_select'] : "";
+   $search = isset($_SESSION['search']) ? $_SESSION['search'] : "";
+   $ingredient = isset($_SESSION['ingredient_search']) ? $_SESSION['ingredient_search'] : "";
+   $sort = isset($_SESSION['sort']) ? $_SESSION['sort'] : $sort;
+   $sort_order = isset($_SESSION['sort_order']) ? $_SESSION['sort_order'] : $sort_order;
 
    if(!$sort)
       $sort = "name";
@@ -32,18 +37,18 @@
 <BODY>
 <FORM METHOD="GET">
    Format: <SELECT NAME="format_select">
-   <? print_format_options($format); ?>
+   <?php print_format_options($format); ?>
    </SELECT><BR>
-      Ingredient name: (Leave blank for all) <INPUT TYPE="TEXT" NAME="ingredient_search" VALUE="<? echo $ingredient;?>"><br>
+      Ingredient name: (Leave blank for all) <INPUT TYPE="TEXT" NAME="ingredient_search" VALUE="<?php echo $ingredient;?>"><br>
    <INPUT TYPE="SUBMIT" NAME="search" VALUE="Search">
 </FORM><BR>
 <A HREF="editingredient.php">&gt; New Ingredient &lt;</A><BR>
 <A HREF="index.php">&gt; Search Recipes &lt;</A><BR>
 <BR>
-<?
+<?php
    if(isset($search))
    {
-      $query = "SELECT id, name, ROUND(cost / \"size\", 3) cost_oz, ROUND(\"size\", 1) \"size\", ROUND(cost, 2) cost, ROUND(calories / serving_size, 2) cals_serv FROM ingredients WHERE name LIKE '%$ingredient%'";
+      $query = "SELECT id, name, ROUND(cost / `size`, 3) cost_oz, ROUND(`size`, 1) `size`, ROUND(cost, 2) cost, ROUND(calories / serving_size, 2) cals_serv FROM ingredients WHERE name LIKE '%$ingredient%'";
       $result = dbquery($query, $dbh) or die("Error searching for ingredients: " . db_error() . "<br>Query was: " . $query);
       if(!$result)
       {
@@ -53,12 +58,12 @@
 ?>
 <TABLE cellpadding=1 cellspacing=0 border=1>
    <COL width='0*'><COL width='30'>
-<? if($format == "Wide") { ?>
+<?php if($format == "Wide") { ?>
    <COL width='30'><COL width='30'><COL width='30'>
-<? } ?>
+<?php } ?>
 <THEAD>
 <TR><TH>Name<TH>$/oz
-<?
+<?php
       if($format == "Wide")
 	 echo "<TH>Size<TH>Cost<TH>E.D.";
       echo "\n\r<TBODY>\n\r";
