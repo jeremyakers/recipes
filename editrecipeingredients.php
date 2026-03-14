@@ -1,13 +1,9 @@
 <?php
    require "header.inc";
+   include "layout.inc";
 
 
-   if(isset($_POST['recipeid']))
-      $recipeid = $_POST['recipeid'];
-   elseif(isset($_GET['recipeid']))
-      $recipeid = $_GET['recipeid'];
-   else
-      $recipeid = 0;
+   $recipeid = request_int('recipeid', 0);
 
    if(!$recipeid)
    {
@@ -15,8 +11,8 @@
       exit;
    }
 
-   $query = "SELECT name, servings, instructions FROM recipes WHERE id = '$recipeid'";
-   $result = dbquery($query, $dbh) or die("Query error: " . db_error() . "<br>Query was: $query");         
+   $query = "SELECT name, servings, instructions FROM recipes WHERE id = ?";
+   $result = dbquery_prepared($query, 'i', array($recipeid), $dbh) or die("Query error: " . db_error());
    if(!$result || !($row = db_fetch_array($result)))
    {
       echo "Recipe not found: '$recipeid'";
@@ -28,73 +24,44 @@
 
 
 
-   if(isset($_POST['addingredient']))
-      $addingredient = true;
-   else
-      $addingredient = false;
-
-   if(isset($_POST['remingredient']))
-      $remingredient = true;
-   else
-      $remingredient = false;
-
-   if(isset($_POST['scrollto']))
-      $scrollto = $_POST['scrollto'];
-   elseif(isset($_GET['scrollto']))
-      $scrollto = $_GET['scrollto'];
-   else
-      $scrollto = "";
-
-   if(isset($_POST['idisplay']))
-      $idisplay = $_POST['idisplay'];
-   else
-      $idisplay = 0;
+   $addingredient = request_bool('addingredient', $_POST);
+   $remingredient = request_bool('remingredient', $_POST);
+   $scrollto = request_value('scrollto', '');
+   $idisplay = request_int('idisplay', 0, $_POST);
 
 
 
    if($addingredient)
    {
-      $searchterm = addslashes($_POST['searchterm']);
-      $amount = $_POST['amount'];
-      $unit = $_POST['unit'];
-      $comment = addslashes($_POST['comment']);
-      $count = $_POST['count'];
+      $searchterm = request_value('searchterm', '', $_POST);
+      $amount = request_value('amount', '', $_POST);
+      $unit = request_int('unit', 0, $_POST);
+      $comment = request_value('comment', '', $_POST);
+      $count = request_int('count', 0, $_POST);
       if($amount > 0)
       {
-         $query = "SELECT id FROM ingredients WHERE name = '$searchterm'";
-         $result = dbquery($query, $dbh) or die("Query error: " . db_error() . "<br>Query was: $query");
+         $query = "SELECT id FROM ingredients WHERE name = ?";
+         $result = dbquery_prepared($query, 's', array($searchterm), $dbh) or die("Query error: " . db_error());
          if(!$result || !($row = db_fetch_array($result)))
          {
-            echo "Ingredient not found: '$searchterm'";
+            echo "Ingredient not found: '" . h($searchterm) . "'";
             exit;
          }
          $ingredient = $row['id'];
 
-         $query = "INSERT INTO recipe_ingredients (recipe, ingredient, amount, unit, comment, pos) VALUES ('$recipeid', '$ingredient', '$amount', '$unit', '$comment', '$count')";
-         dbquery($query, $dbh) or die("Query error: " . db_error() . "<br>Query was: $query");
+         $query = "INSERT INTO recipe_ingredients (recipe, ingredient, amount, unit, comment, pos) VALUES (?, ?, ?, ?, ?, ?)";
+         dbquery_prepared($query, 'iisdsi', array($recipeid, $ingredient, $amount, $unit, $comment, $count), $dbh) or die("Query error: " . db_error());
       }
    }
    if($remingredient)
    {
-      $ingredient = $_POST['ingredient'];
-      $query = "DELETE FROM recipe_ingredients WHERE recipe = '$recipeid' AND ingredient = '$ingredient'";
-      dbquery($query, $dbh) or die("Query error: " . db_error() . "<br>Query was: $query");
+      $ingredient = request_int('ingredient', 0, $_POST);
+      $query = "DELETE FROM recipe_ingredients WHERE recipe = ? AND ingredient = ?";
+      dbquery_prepared($query, 'ii', array($recipeid, $ingredient), $dbh) or die("Query error: " . db_error());
    }
 
 ?>
-   <style>
-   body {font-family: verdana, arial, sans-serif; font-size: 12px; }
-   #search, ul { padding: 3px; width: 150px; border: 1px solid #999; font-family: verdana, arial, sans-serif; font-size: 12px;}
-   ul { list-style-type: none; font-family: verdana, arial, sans-serif; font-size: 12px;  margin: 5px 0 0 0}
-   li { margin: 0 0 5px 0; cursor: default; color: red;}
-   li:hover { background: #ffc; }
-   li.selected { background: #ffc; }
-   </style>
-   <TITLE>Recipe Editor</TITLE>
-   <script type="text/javascript" src="../scriptaculous-js/lib/prototype.js"></script>
-   <script type="text/javascript" src="../scriptaculous-js/src/effects.js"></script>
-   <script type="text/javascript" src="../scriptaculous-js/src/controls.js"></script>
-   <!--<script type="text/javascript" src="../scriptaculous-js/src/scriptaculous.js"></script>-->
+<?php render_page_start('Recipe Ingredient Editor', 'Recipe Ingredient Editor', 'Edit Recipe Ingredients'); ?>
    <script type="text/javascript" language="javascript">
    
    function findPos(obj) 
@@ -134,15 +101,12 @@
       //window.scroll(0,findPos(document.getElementById('<?php echo $scrollto;?>')));
    }
 </script>
-</HEAD>
-<BODY onLoad="javascript:myPageLoad()">
-<H2><CENTER>Editing ingredients for recipe: <?php echo "$name" ?></CENTER></H2>
-<A HREF="index.php">&gt; Back to Search Page &lt;</A><BR>
-<BR>
-<A HREF="editrecipe.php?recipeid=<?php echo $recipeid;?>">&gt; Back to Recipe Editor &lt;</A><BR>
-<P>
+<section class="card">
+<p><a href="index.php">Back to Search Page</a></p>
+<p><a href="editrecipe.php?recipeid=<?php echo $recipeid;?>">Back to Recipe Editor</a></p>
 <?php echo $instructions; ?>
-<P>
+</section>
+<section class="card table-wrap">
 <?php list($total_oz, $total_cost, $count, $total_calories, $total_carbs, $total_fat, $total_protein, $total_fiber) = print_ingredients($recipeid, true, true, $idisplay); ?><br><br>
 <?php
    if($servings > 0)
@@ -175,25 +139,26 @@
 <TR><TH>g(oz)/serving<TH>Calories<TH>Energy Density<TH>Carbs<TH>Fat<TH>Protein<TH>Fiber
 <TR><TD><?php echo "$g_serving ($oz_serving)";?><TD><?php echo $calories?><TD><?php echo $ed?><TD><?php echo $carbs?><TD><?php echo $fat?><TD><?php echo $protein?><TD><?php echo $fiber?>
 </TABLE>
+</section>
 
-<H3>Add ingredients:</H3>
-<br>
-<TABLE>
+<section class="card">
+<H3>Add ingredients</H3>
 <FORM NAME="form2" METHOD="POST" onSubmit="javascript:saveScrollTo('form2', 'ingredient')">
 <INPUT TYPE="HIDDEN" NAME="scrollto">
 <INPUT TYPE="HIDDEN" NAME="recipeid" VALUE="<?php echo $recipeid?>">
 <INPUT TYPE="HIDDEN" NAME="count" VALUE="<?php echo $count?>">
-<TR><TD>Amount:<TD>Unit:<TD>Ingredient:<TD>Comment:
-<TR><TD><INPUT TYPE="TEXT" NAME="amount" ID="ingredient" SIZE="5"><TD><SELECT NAME="unit"><?php print_unit_options("") ?></SELECT> of <TD><input type="text" name="searchterm" id="searchterm" />
-<div id="hint"></div>
-   <script type="text/javascript">
-      new Ajax.Autocompleter("searchterm","hint","server.php");
-   </script>
-<TD><INPUT TYPE="TEXT" NAME="comment">
-<TR><TD colspan="2"><INPUT TYPE="SUBMIT" NAME="addingredient" ID="addingredient" VALUE="Add Ingredient"><BR>
-<TR><TD>&nbsp;
-<TR><TD colspan="2"><A HREF="editingredient.php?returnrecipe=<?php echo $recipeid?>">&gt; New ingredient &lt;</A>
-</FORM>
+<TABLE class="form-table">
+<TR><TD>Amount<TD><INPUT TYPE="TEXT" NAME="amount" ID="ingredient" SIZE="5">
+<TR><TD>Unit<TD><SELECT NAME="unit"><?php print_unit_options("") ?></SELECT>
+<TR><TD>Ingredient<TD><input type="text" name="searchterm" id="searchterm" list="ingredient-options" />
+<TR><TD>Comment<TD><INPUT TYPE="TEXT" NAME="comment">
 </TABLE>
-</BODY>
-</HTML>
+<datalist id="ingredient-options"><?php print_ingredient_name_options(); ?></datalist>
+<div class="inline-actions">
+<INPUT TYPE="SUBMIT" NAME="addingredient" ID="addingredient" VALUE="Add Ingredient">
+<A HREF="editingredient.php?returnrecipe=<?php echo $recipeid?>">New ingredient</A>
+</div>
+</FORM>
+</section>
+<script>myPageLoad();</script>
+<?php render_page_end(); ?>
