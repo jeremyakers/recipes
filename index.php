@@ -1,5 +1,6 @@
 <?php 
 include "header.inc";
+include "layout.inc";
 
 $sort = isset($_SESSION['sort']) ? $_SESSION['sort'] : "";
 $sort_order = isset($_SESSION['sort_order']) ? $_SESSION['sort_order'] : "";
@@ -52,11 +53,10 @@ if(!$sort)
    $sort = "mycategory";
 $dbsort = addslashes($sort);
 ?>
-<HTML>
-<HEAD><TITLE>Recipe Search</TITLE></HEAD>
-<BODY>
+<?php render_page_start('Recipe Search', 'Recipe Search', 'Recipes'); ?>
+<section class="card">
 <FORM METHOD="GET">
-<TABLE>
+<TABLE class="form-table">
    <TR><TD>Format: <TD><SELECT NAME="format_select">
    <?php print_format_options($format); ?>
    </SELECT>
@@ -75,13 +75,16 @@ $dbsort = addslashes($sort);
 <?php } ?>
    <INPUT TYPE="SUBMIT" NAME="search" VALUE="Search"><BR>
 </FORM><BR>
+<div class="inline-actions">
 <FORM ACTION="editrecipe.php" METHOD="POST">
 <INPUT TYPE="HIDDEN" NAME="format_select" VALUE="<?php echo $format;?>">
 <INPUT TYPE="HIDDEN" NAME="category_select" VALUE="<?php echo $category;?>">
 <INPUT TYPE="HIDDEN" NAME="recipe_search" VALUE="<?php echo $recipe;?>">
-<INPUT TYPE="SUBMIT" NAME="new" VALUE="New Recipe"><BR>
+<INPUT TYPE="SUBMIT" NAME="new" VALUE="New Recipe">
 </FORM><BR>
-<A HREF="ingredients.php">&gt; Search Ingredients &lt;</A><BR>
+<A HREF="ingredients.php">Search Ingredients</A>
+</div>
+</section>
 <?php
 if($category > 0)
    $cat_search = "AND category = '$category'";
@@ -139,6 +142,7 @@ if($search)
       echo "No matching recipes found.";
       exit;
    }
+   echo "<section class=\"card\"><div class=\"table-wrap\">";
    echo "<TABLE cellpadding=1 cellspacing=1 border=1><THEAD>\n\r";
    echo "<COL width='110'><COL width='200'>";
    if($format == "Wide")
@@ -154,8 +158,7 @@ if($search)
       if($format == "Wide")
          echo "<TD>$edittext<TD>".$row['recipe_time']."<TD>".$row['servings']."<TD>".$row['calories']."<TD>".$row['energy_density']."<TD>".$row['carbs']."<TD>".$row['fat']."<TD>".$row['protein']."<TD>".$row['fiber']."<TD>".$row['ing_count']."\n\r";
    }
-   echo "</TABLE>";
+    echo "</TABLE></div></section>";
 }
 ?>
-</BODY>
-</HTML>
+<?php render_page_end(); ?>

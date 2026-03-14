@@ -1,4 +1,5 @@
 <?php include "header.inc";
+   include "layout.inc";
    $sort = isset($_SESSION['sort']) ? $_SESSION['sort'] : "";
    $sort_order = isset($_SESSION['sort_order']) ? $_SESSION['sort_order'] : "";
    if(isset($_GET['sort']))
@@ -32,19 +33,23 @@
       $sort = "name";
 
 ?>
-<HTML>
-<HEAD><TITLE>Ingredient Search</TITLE></HEAD>
-<BODY>
+<?php render_page_start('Ingredient Search', 'Ingredient Search', 'Ingredients'); ?>
+<section class="card">
 <FORM METHOD="GET">
-   Format: <SELECT NAME="format_select">
-   <?php print_format_options($format); ?>
-   </SELECT><BR>
-      Ingredient name: (Leave blank for all) <INPUT TYPE="TEXT" NAME="ingredient_search" VALUE="<?php echo $ingredient;?>"><br>
+   <TABLE class="form-table">
+   <TR><TD>Format<TD><SELECT NAME="format_select">
+    <?php print_format_options($format); ?>
+    </SELECT><BR>
+   <TR><TD>Ingredient name<TD><INPUT TYPE="TEXT" NAME="ingredient_search" VALUE="<?php echo $ingredient;?>">
+   </TABLE>
    <INPUT TYPE="SUBMIT" NAME="search" VALUE="Search">
 </FORM><BR>
-<A HREF="editingredient.php">&gt; New Ingredient &lt;</A><BR>
-<A HREF="index.php">&gt; Search Recipes &lt;</A><BR>
+<div class="inline-actions">
+<A HREF="editingredient.php">New Ingredient</A>
+<A HREF="index.php">Search Recipes</A>
+</div>
 <BR>
+</section>
 <?php
    if(isset($search))
    {
@@ -56,7 +61,7 @@
          exit;
       }
 ?>
-<TABLE cellpadding=1 cellspacing=0 border=1>
+<section class="card"><div class="table-wrap"><TABLE cellpadding=1 cellspacing=0 border=1>
    <COL width='0*'><COL width='30'>
 <?php if($format == "Wide") { ?>
    <COL width='30'><COL width='30'><COL width='30'>
@@ -79,8 +84,7 @@
 	 if($format == "Wide")
 	    echo "<TD align='right'>$size oz<TD align='right'>$$cost<TD align='right'>$cals_serv\n\r";
       }
-      echo "</TABLE>\n\r";
+      echo "</TABLE></div></section>\n\r";
    }
 ?>
-</BODY>
-</HTML>
+<?php render_page_end(); ?>
