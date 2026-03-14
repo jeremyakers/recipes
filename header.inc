@@ -4,6 +4,7 @@ session_name('recipes');
 session_start();
 
 $db_config = array();
+$app_config = array();
 if(file_exists(__DIR__ . '/config.local.php'))
    require __DIR__ . '/config.local.php';
 
@@ -33,6 +34,19 @@ function db_config_value($key, $env_names, $default = '')
       return $db_config[$key];
 
    return db_env($env_names, $default);
+}
+
+function app_config_value($key, $env_names = array(), $default = '')
+{
+   global $app_config;
+
+   if(isset($app_config[$key]) && $app_config[$key] !== '')
+      return $app_config[$key];
+
+   if(count($env_names) > 0)
+      return db_env($env_names, $default);
+
+   return $default;
 }
 
 function db_connect()
@@ -116,6 +130,191 @@ $formats = array("Wide", "Mobile");
       else
          $usedbh = $dbh;
       return mysqli_insert_id($usedbh);
+   }
+
+   function db_prepare_refs($values)
+   {
+      $refs = array();
+      foreach($values as $key => $value)
+         $refs[$key] = &$values[$key];
+      return $refs;
+   }
+
+   function dbquery_prepared($query, $types = '', $params = array(), $mydbh = null)
+   {
+      global $dbh;
+      if(isset($mydbh))
+         $usedbh = $mydbh;
+      else
+         $usedbh = $dbh;
+
+      $statement = mysqli_prepare($usedbh, db_normalize_query($query));
+      if(!$statement)
+         return false;
+
+      if($types !== '' && count($params) > 0)
+      {
+         $bind_args = array($statement, $types);
+         foreach(array_keys($params) as $index)
+            $bind_args[] = &$params[$index];
+         call_user_func_array('mysqli_stmt_bind_param', $bind_args);
+      }
+
+      if(!mysqli_stmt_execute($statement))
+         return false;
+
+      $result = mysqli_stmt_get_result($statement);
+      if($result !== false)
+         return $result;
+
+      return true;
+   }
+
+   function request_value($key, $default = '', $source = null)
+   {
+      if($source !== null)
+      {
+         if(isset($source[$key]))
+            return $source[$key];
+         return $default;
+      }
+
+      if(isset($_POST[$key]))
+         return $_POST[$key];
+      if(isset($_GET[$key]))
+         return $_GET[$key];
+      return $default;
+   }
+
+   function request_int($key, $default = 0, $source = null)
+   {
+      $value = request_value($key, $default, $source);
+      if($value === '' || $value === null)
+         return (int)$default;
+      if(!is_numeric($value))
+         return (int)$default;
+      return (int)$value;
+   }
+
+   function request_bool($key, $source = null)
+   {
+      if($source !== null)
+         return isset($source[$key]);
+      return isset($_POST[$key]) || isset($_GET[$key]);
+   }
+
+   function request_confirmed($key, $source = null)
+   {
+      $value = request_value($key, '', $source);
+      return in_array((string)$value, array('1', '2', 'on', 'yes', 'true'), true);
+   }
+
+   function h($value)
+   {
+      return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+   }
+
+   function http_get_json($url)
+   {
+      $context = stream_context_create(array(
+         'http' => array(
+            'timeout' => 15,
+            'ignore_errors' => true,
+            'header' => "Accept: application/json\r\nUser-Agent: recipes-modernization/1.0\r\n",
+         ),
+      ));
+
+      $response = @file_get_contents($url, false, $context);
+      if($response === false)
+         return false;
+
+      $decoded = json_decode($response, true);
+      if(!is_array($decoded))
+         return false;
+
+      return $decoded;
+   }
+
+   function usda_api_key()
+   {
+      return app_config_value('usda_api_key', array('RECIPES_USDA_API_KEY', 'USDA_API_KEY'), '');
+   }
+
+   function usda_search_foods($query)
+   {
+      $api_key = usda_api_key();
+      if(!$api_key || !$query)
+         return false;
+
+      $url = 'https://api.nal.usda.gov/fdc/v1/foods/search?api_key=' . rawurlencode($api_key)
+         . '&query=' . rawurlencode($query)
+         . '&pageSize=10';
+
+      return http_get_json($url);
+   }
+
+   function usda_get_food($fdc_id)
+   {
+      $api_key = usda_api_key();
+      if(!$api_key || !$fdc_id)
+         return false;
+
+      $url = 'https://api.nal.usda.gov/fdc/v1/food/' . rawurlencode($fdc_id)
+         . '?api_key=' . rawurlencode($api_key);
+
+      return http_get_json($url);
+   }
+
+   function usda_extract_nutrients($food)
+   {
+      $values = array(
+         'calories' => 0,
+         'carbs' => 0,
+         'fat' => 0,
+         'protein' => 0,
+         'fiber' => 0,
+      );
+
+      if(!isset($food['foodNutrients']) || !is_array($food['foodNutrients']))
+         return $values;
+
+      foreach($food['foodNutrients'] as $nutrient)
+      {
+         $number = '';
+         if(isset($nutrient['nutrient']['number']))
+            $number = $nutrient['nutrient']['number'];
+         elseif(isset($nutrient['nutrientNumber']))
+            $number = $nutrient['nutrientNumber'];
+         elseif(isset($nutrient['number']))
+            $number = $nutrient['number'];
+
+         $amount = 0;
+         if(isset($nutrient['amount']))
+            $amount = $nutrient['amount'];
+         elseif(isset($nutrient['value']))
+            $amount = $nutrient['value'];
+
+         switch((string)$number)
+         {
+         case '1008':
+            $values['calories'] = $amount;
+            break;
+         case '1005':
+            $values['carbs'] = $amount;
+            break;
+         case '1004':
+            $values['fat'] = $amount;
+            break;
+         case '1003':
+            $values['protein'] = $amount;
+            break;
+         case '1079':
+            $values['fiber'] = $amount;
+            break;
+         }
+      }
+
+      return $values;
    }
 
 
@@ -449,6 +648,14 @@ $formats = array("Wide", "Mobile");
          echo "<OPTION$selected VALUE=\"$id\">$name";
          $count++;
       }
+   }
+
+   function print_ingredient_name_options()
+   {
+      global $dbh;
+      $result = dbquery("SELECT name FROM ingredients ORDER BY name", $dbh);
+      while($row = db_fetch_array($result))
+         echo "<option value=\"" . h($row['name']) . "\"></option>";
    }
 
    function print_recipe_options($recipe)

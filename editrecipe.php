@@ -1,17 +1,11 @@
 <?php
    require "header.inc";
-   if(file_exists("../fckeditor/fckeditor.php"))
-      include_once("../fckeditor/fckeditor.php");
+   include "layout.inc";
 
    
-   if(isset($_POST['recipeid']))
-      $recipeid = $_POST['recipeid'];
-   elseif(isset($_GET['recipeid']))
-      $recipeid = $_GET['recipeid'];
-   else
-      $recipeid = 0;
+   $recipeid = request_int('recipeid', 0);
 
-   if(isset($_POST['new']))
+   if(request_bool('new', $_POST))
    {
       $recipeid = 0;
       $new = true;
@@ -19,15 +13,8 @@
    else
       $new = false;
 
-   if(isset($_POST['save']))
-      $save = true;
-   else
-      $save = false;
-
-   if(isset($_POST['delete']))
-      $delete = true;
-   else
-      $delete = false;
+   $save = request_bool('save', $_POST);
+   $delete = request_bool('delete', $_POST);
 
    $name = "";
    $time = "";
@@ -41,27 +28,11 @@
    $fiber = "";
    $instructions = "";
 
-   if(isset($_POST['format_select']))
-      $format_select = $_POST['format_select'];
-   else
-      $format_select = "";
-   if(isset($_POST['search']))
-      $search = $_POST['search'];
-   else
-      $search = "";
-   if(isset($_POST['recipe_search']))
-      $recipe_search = $_POST['recipe_search'];
-   else
-      $recipe_search = "";
-   if(isset($_POST['category_select']))
-      $category_select = $_POST['category_select'];
-   else
-      $category_select = 0;
-
-   if(isset($_POST['idisplay']))
-      $idisplay = $_POST['idisplay'];
-   else
-      $idisplay = 0;
+   $format_select = request_value('format_select', '', $_POST);
+   $search = request_value('search', '', $_POST);
+   $recipe_search = request_value('recipe_search', '', $_POST);
+   $category_select = request_int('category_select', 0, $_POST);
+   $idisplay = request_int('idisplay', 0, $_POST);
 
 
    if(isset($_POST['edit']) || ($recipeid && !$delete))
@@ -77,43 +48,35 @@
 
    if($save)
    {
-      $name = $_POST['name'];
-      $time = $_POST['time'];
-      $category = $_POST['category'];
-      $servings = $_POST['servings'];
-      $calories = $_POST['calories'];
-      $ed = $_POST['ed'];
-      $carbs = $_POST['carbs'];
-      $fat = $_POST['fat'];
-      $protein = $_POST['protein'];
-      $fiber = $_POST['fiber'];
-      $instructions = $_POST['instructions'];
-
-      $dbname = addslashes($_POST['name']);
-      $dbtime = addslashes($_POST['time']);
-      $dbcategory = addslashes($_POST['category']);
-      $dbservings = addslashes($_POST['servings']);
-      $dbcalories = addslashes($_POST['calories']);
-      $dbed = addslashes($_POST['ed']);
-      $dbcarbs = addslashes($_POST['carbs']);
-      $dbfat = addslashes($_POST['fat']);
-      $dbprotein = addslashes($_POST['protein']);
-      $dbfiber = addslashes($_POST['fiber']);
-      $dbinstructions = addslashes($_POST['instructions']);
+      $name = request_value('name', '', $_POST);
+      $time = request_value('time', '', $_POST);
+      $category = request_int('category', 0, $_POST);
+      $servings = request_value('servings', '', $_POST);
+      $calories = request_value('calories', '', $_POST);
+      $ed = request_value('ed', '', $_POST);
+      $carbs = request_value('carbs', '', $_POST);
+      $fat = request_value('fat', '', $_POST);
+      $protein = request_value('protein', '', $_POST);
+      $fiber = request_value('fiber', '', $_POST);
+      $instructions = request_value('instructions', '', $_POST);
 
 
       if(!$recipeid)
       {
-	 $query = "INSERT INTO recipes (name, `time`, category, servings, calories, energy_density, carbs, fat, protein, fiber, instructions) VALUES ('$dbname', '$dbtime', '$dbcategory', '$dbservings', '$dbcalories', '$dbed', '$dbcarbs', '$dbfat', '$dbprotein', '$dbfiber', '$dbinstructions')";
+	 $query = "INSERT INTO recipes (name, `time`, category, servings, calories, energy_density, carbs, fat, protein, fiber, instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+	 $params = array($name, $time, $category, $servings, $calories, $ed, $carbs, $fat, $protein, $fiber, $instructions);
+	 $types = 'ssissssssss';
       }
       else
       {
-	 $query = "UPDATE recipes SET name = '$dbname', `time` = '$dbtime', category = '$dbcategory', servings = '$dbservings', calories = '$dbcalories', energy_density = '$dbed', carbs = '$dbcarbs', fat = '$dbfat', protein = '$dbprotein', fiber = '$dbfiber', instructions = '$dbinstructions' WHERE id = '$recipeid'";
+	 $query = "UPDATE recipes SET name = ?, `time` = ?, category = ?, servings = ?, calories = ?, energy_density = ?, carbs = ?, fat = ?, protein = ?, fiber = ?, instructions = ? WHERE id = ?";
+	 $params = array($name, $time, $category, $servings, $calories, $ed, $carbs, $fat, $protein, $fiber, $instructions, $recipeid);
+	 $types = 'ssissssssssi';
       }
 
-      dbquery($query, $dbh) or die("Error updating records: " . db_error($dbh));
+      dbquery_prepared($query, $types, $params, $dbh) or die("Error updating records: " . db_error($dbh));
       echo "Recipe saved successfully.<BR>";
-      echo "<FORM METHOD='POST'><INPUT TYPE=\"HIDDEN\" NAME=\"format_select\" VALUE=\"$format_select\"><INPUT TYPE=HIDDEN NAME=\"category_select\" VALUE=\"$category_select\"><INPUT TYPE=\"HIDDEN\" NAME=\"recipe_search\" VALUE=\"$recipe_search\"><INPUT TYPE=\"HIDDEN\" NAME=\"search\" VALUE=\"$search\"><INPUT TYPE='Submit' NAME='new' VALUE='Add another'></FORM>";
+      echo "<FORM METHOD='POST'><INPUT TYPE=\"HIDDEN\" NAME=\"format_select\" VALUE=\"" . h($format_select) . "\"><INPUT TYPE=HIDDEN NAME=\"category_select\" VALUE=\"" . h($category_select) . "\"><INPUT TYPE=\"HIDDEN\" NAME=\"recipe_search\" VALUE=\"" . h($recipe_search) . "\"><INPUT TYPE=\"HIDDEN\" NAME=\"search\" VALUE=\"" . h($search) . "\"><INPUT TYPE='Submit' NAME='new' VALUE='Add another'></FORM>";
       if(!$recipeid)
 	 $recipeid = db_insert_id($dbh);
       $edit = 1;
@@ -128,7 +91,7 @@
          exit;
       }
 
-      $result = dbquery("SELECT name, `time`, category, servings, calories, energy_density, carbs, fat, protein, fiber, instructions FROM recipes WHERE id = '$recipeid'", $dbh) or die("Error in query: " . db_error($dbh));
+      $result = dbquery_prepared("SELECT name, `time`, category, servings, calories, energy_density, carbs, fat, protein, fiber, instructions FROM recipes WHERE id = ?", 'i', array($recipeid), $dbh) or die("Error in query: " . db_error($dbh));
       if(!$result || !($row = db_fetch_array($result)))
       {
          echo "Recipe not found.: $recipeid";
@@ -148,7 +111,7 @@
    }
    else if($delete)
    {
-      if($_POST['deleteconfirm'] != 2)
+      if(!request_confirmed('deleteconfirm', $_POST))
       {
          echo "You must select 'Yes' from the confirmation pull down option.";
          exit;
@@ -160,22 +123,18 @@
          exit;
       }
 
-      dbquery("DELETE FROM recipes WHERE id = '$recipeid'", $dbh) or die("Error deleting record: " . db_error());
+      dbquery_prepared("DELETE FROM recipes WHERE id = ?", 'i', array($recipeid), $dbh) or die("Error deleting record: " . db_error());
       echo "Recipe deleted.<BR>";
       echo "<A HREF=\"index.php\">&gt; Back to recipes search page &lt;</A><BR>";
       exit;
    }
 ?>
-<HTML>
-<HEAD>
-   <TITLE>Recipe Editor</TITLE>
-</HEAD>
-<BODY>
-<H2><CENTER>Editing recipe: <?php echo "$name" ?></CENTER></H2>
-<A HREF="index.php">&gt; Back to Search Page &lt;</A><BR>
-<P>
+<?php render_page_start('Recipe Editor', 'Recipe Editor', 'Edit Recipe'); ?>
+<section class="card">
+<p><a href="index.php">Back to Search Page</a></p>
+<script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
 <FORM NAME="form1" METHOD="POST">
-   <TABLE>
+   <TABLE class="form-table">
    <TR><TD>Name:           <TD><INPUT TYPE="TEXT" NAME="name"     VALUE="<?php echo $name?>" ID="name" SIZE=70>
    <TR><TD>Category:       <TD><SELECT NAME="category"><?php print_category_options($category); ?></SELECT>
    <TR><TD>Time:           <TD><INPUT TYPE="TEXT" NAME="time"     VALUE="<?php echo $time?>">
@@ -189,29 +148,20 @@
 </TABLE></p>
 <H3>Instructions:</H3>
 <?php
-   if(class_exists('FCKeditor'))
-   {
-      $oFCKeditor = new FCKeditor('instructions');
-      $oFCKeditor->BasePath = '/fckeditor/';
-      $oFCKeditor->Config['EnterMode'] = 'br';
-      $oFCKeditor->Value = $instructions;
-      $oFCKeditor->Width = 800;
-      $oFCKeditor->Height = 400;
-      $oFCKeditor->Create();
-   }
-   else
-   {
-      echo '<TEXTAREA NAME="instructions" COLS="100" ROWS="20">' . htmlspecialchars($instructions) . '</TEXTAREA>';
-   }
+   echo '<TEXTAREA NAME="instructions" ID="instructions" COLS="100" ROWS="20">' . htmlspecialchars($instructions) . '</TEXTAREA>';
 ?><BR>
 <INPUT TYPE="HIDDEN" NAME="recipeid" VALUE="<?php echo $recipeid?>">
-<INPUT TYPE="SUBMIT" NAME="save" VALUE="Save"><BR>
-<BR>
-<SELECT NAME="deleteconfirm"><OPTION VALUE="0">Delete?<OPTION VALUE="1">No<OPTION VALUE="2">Yes</SELECT>
+<div class="inline-actions">
+<INPUT TYPE="SUBMIT" NAME="save" VALUE="Save">
+<label><input type="checkbox" name="deleteconfirm" value="1"> Confirm delete</label>
 <INPUT TYPE="SUBMIT" NAME="delete" VALUE="Delete">
+</div>
 </FORM><br>
-<A HREF="editrecipeingredients.php?recipeid=<?php echo $recipeid;?>">&gt; Modify ingredients for this recipe &lt;</A><BR>
-<BR>
+</section>
+<section class="card">
+<A HREF="editrecipeingredients.php?recipeid=<?php echo $recipeid;?>">Modify ingredients for this recipe</A>
+</section>
+<section class="card table-wrap">
 <?php
 if($recipeid)
    list($total_oz, $total_cost, $count, $total_calories, $total_carbs, $total_fat, $total_protein, $total_fiber) = print_ingredients($recipeid, true, true, $idisplay);
@@ -245,5 +195,10 @@ else
 <TR><TH>Calories<TH>Energy Density<TH>Carbs<TH>Fat<TH>Protein<TH>Fiber
 <TR><TD><?php echo $calories?><TD><?php echo $ed?><TD><?php echo $carbs?><TD><?php echo $fat?><TD><?php echo $protein?><TD><?php echo $fiber?>
 </TABLE>
-</BODY>
-</HTML>
+</section>
+<script>
+if (window.ClassicEditor) {
+  ClassicEditor.create(document.querySelector('#instructions')).catch(function () {});
+}
+</script>
+<?php render_page_end(); ?>
