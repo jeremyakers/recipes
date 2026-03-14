@@ -5,3 +5,5 @@ listdsn
 listtables
 *~
 config.local.php
+.sisyphus/evidence/
+.sisyphus/__pycache__/
