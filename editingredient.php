@@ -1,5 +1,6 @@
 <?php
    require "header.inc";
+   include "layout.inc";
 
    $name = "";
    $size = "";
@@ -17,14 +18,9 @@
    $ndtext = "";
    $voltext = "";
    
-   if(isset($_POST['ingredientid']))
-      $ingredientid = $_POST['ingredientid'];
-   elseif (isset($_GET['ingredientid']))
-      $ingredientid = $_GET['ingredientid'];
-   else
-      $ingredientid = 0;
+   $ingredientid = request_int('ingredientid', 0);
 
-   if(isset($_POST['new']))
+   if(request_bool('new', $_POST))
    {
       $ingredientid = 0;
       $new = true;
@@ -32,50 +28,15 @@
    else
       $new = false;
 
-   if(isset($_POST['save']))
-      $save = true;
-   else
-      $save = false;
-
-   if(isset($_POST['edit']))
-      $edit = true;
-   else
-      $edit = false;
-
-   if(isset($_POST['delete']))
-      $delete = true;
-   else
-      $delete = false;
-
-   if(isset($_GET['returnrecipe']))
-      $returnrecipe = $_GET['returnrecipe'];
-   elseif(isset($_POST['returnrecipe']))
-      $returnrecipe = $_POST['returnrecipe'];
-   else
-      $returnrecipe = 0;
-
-   if(isset($_POST['format_select']))
-      $format_select = $_POST['format_select'];
-   elseif(isset($_GET['format_select']))
-      $format_select = $_GET['format_select'];
-   if(isset($_POST['search']))
-      $search = $_POST['search'];
-   elseif(isset($_GET['search']))
-      $search = $_GET['search'];
-   if(isset($_POST['ingredient_search']))
-      $ingredient_search = $_POST['ingredient_search'];
-   elseif(isset($_GET['ingredient_search']))
-      $ingredient_search = $_GET['ingredient_search'];
-
-   if(isset($_POST['ndurl']))
-      $ndurl = $_POST['ndurl'];
-   else
-      $ndurl = "";
-
-   if(isset($_POST['ndlookup']))
-      $ndlookup = $_POST['ndlookup'];
-   else
-      $ndlookup = "";
+   $save = request_bool('save', $_POST);
+   $edit = request_bool('edit', $_POST);
+   $delete = request_bool('delete', $_POST);
+   $returnrecipe = request_int('returnrecipe', 0);
+   $format_select = request_value('format_select', '');
+   $search = request_value('search', '');
+   $ingredient_search = request_value('ingredient_search', '');
+   $ndurl = request_value('ndurl', '', $_POST);
+   $ndlookup = request_value('ndlookup', '', $_POST);
 
 
    if(!$save && !$edit && !$new && !$ingredientid)
@@ -90,22 +51,22 @@
 
    if($save)
    {
-      $name = $_POST['name'];
-      $size = $_POST['size'];
-      $cost = $_POST['cost'];
-      $units = $_POST['units'];
-      $recipe = $_POST['recipe'];
-      $serving_size = $_POST['serving_size'];
-      $calories = $_POST['calories'];
-      $carbs = $_POST['carbs'];
-      $fat = $_POST['fat'];
-      $protein = $_POST['protein'];
-      $fiber = $_POST['fiber'];
-      $ounces_cup = $_POST['ounces_cup'];
-      $weight_select = $_POST['weight_select'];
-      $volume_select = $_POST['volume_select'];
+      $name = request_value('name', '', $_POST);
+      $size = request_value('size', '', $_POST);
+      $cost = request_value('cost', '', $_POST);
+      $units = request_value('units', '', $_POST);
+      $recipe = request_int('recipe', 0, $_POST);
+      $serving_size = request_value('serving_size', '', $_POST);
+      $calories = request_value('calories', '', $_POST);
+      $carbs = request_value('carbs', '', $_POST);
+      $fat = request_value('fat', '', $_POST);
+      $protein = request_value('protein', '', $_POST);
+      $fiber = request_value('fiber', '', $_POST);
+      $ounces_cup = request_value('ounces_cup', '', $_POST);
+      $weight_select = request_int('weight_select', 0, $_POST);
+      $volume_select = request_int('volume_select', 0, $_POST);
 
-      $unit = $_POST['unit'];
+      $unit = request_int('unit', 0, $_POST);
       $mult = find_unit_mult($unit);
       if($mult == 0)
          $mult = find_count_mult($ingredientid);
@@ -116,24 +77,25 @@
       $in_cup = find_units_cup($volume_select);
 
       $ounces_cup = $ounces_cup * $mult * $in_cup;
-
-      $dbname = addslashes($_POST['name']);
-
       if(!$ingredientid)
       {
-	 $query = "INSERT INTO ingredients (name, `size`, cost, units, recipe, serving_size, calories, carbs, fat, protein, fiber, ounces_cup) VALUES ('$dbname', '$size', '$cost', '$units', '$recipe', '$serving_size', '$calories', '$carbs', '$fat', '$protein', '$fiber', '$ounces_cup')";
+	 $query = "INSERT INTO ingredients (name, `size`, cost, units, recipe, serving_size, calories, carbs, fat, protein, fiber, ounces_cup) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+	 $params = array($name, $size, $cost, $units, $recipe, $serving_size, $calories, $carbs, $fat, $protein, $fiber, $ounces_cup);
+	 $types = 'sdddiddddddd';
       }
       else
       {
-	 $query = "UPDATE ingredients SET name = '$dbname', `size` = '$size', cost = '$cost', units = '$units', recipe = '$recipe', serving_size = '$serving_size', calories = '$calories', carbs = '$carbs', fat = '$fat', protein = '$protein', fiber = '$fiber', ounces_cup = '$ounces_cup' WHERE id = '$ingredientid'";
+	 $query = "UPDATE ingredients SET name = ?, `size` = ?, cost = ?, units = ?, recipe = ?, serving_size = ?, calories = ?, carbs = ?, fat = ?, protein = ?, fiber = ?, ounces_cup = ? WHERE id = ?";
+	 $params = array($name, $size, $cost, $units, $recipe, $serving_size, $calories, $carbs, $fat, $protein, $fiber, $ounces_cup, $ingredientid);
+	 $types = 'sdddidddddddi';
       }
 
-      dbquery($query, $dbh) or die("Error updating records: " . db_error($dbh) . "<BR>Query: $query");
+      dbquery_prepared($query, $types, $params, $dbh) or die("Error updating records: " . db_error($dbh));
       echo "Ingredient saved successfully.<BR>";
       echo "<FORM METHOD='POST'>";
       if($returnrecipe) 
-	 echo "<INPUT TYPE=\"HIDDEN\" NAME=\"returnrecipe\" VALUE=\"$returnrecipe\">";
-      echo "<INPUT TYPE=\"HIDDEN\" NAME=\"format_select\" VALUE=\"$format_select\"><INPUT TYPE=\"HIDDEN\" NAME=\"recipe_search\" VALUE=\"$recipe_search\"><INPUT TYPE=\"HIDDEN\" NAME=\"search\" VALUE=\"$search\"><INPUT TYPE='Submit' NAME='new' VALUE='Add another'></FORM>";
+	 echo "<INPUT TYPE=\"HIDDEN\" NAME=\"returnrecipe\" VALUE=\"" . h($returnrecipe) . "\">";
+      echo "<INPUT TYPE=\"HIDDEN\" NAME=\"format_select\" VALUE=\"" . h($format_select) . "\"><INPUT TYPE=\"HIDDEN\" NAME=\"recipe_search\" VALUE=\"" . h($ingredient_search) . "\"><INPUT TYPE=\"HIDDEN\" NAME=\"search\" VALUE=\"" . h($search) . "\"><INPUT TYPE='Submit' NAME='new' VALUE='Add another'></FORM>";
       if(!$ingredientid)
       {
 	 $ingredientid = db_insert_id($dbh);
@@ -150,7 +112,7 @@
          exit;
       }
 
-      $result = dbquery("SELECT name, `size`, cost, recipe, serving_size, calories, carbs, fat, protein, fiber, units, ounces_cup FROM ingredients WHERE id = '$ingredientid'", $dbh) or die("Error in query: " . db_error($dbh));
+      $result = dbquery_prepared("SELECT name, `size`, cost, recipe, serving_size, calories, carbs, fat, protein, fiber, units, ounces_cup FROM ingredients WHERE id = ?", 'i', array($ingredientid), $dbh) or die("Error in query: " . db_error($dbh));
       if(!$result || !($row = db_fetch_array($result)))
       {
          echo "Ingredient not found: $ingredientid";
@@ -171,8 +133,8 @@
    }
    else if($delete)
    {
-      if($_POST['deleteconfirm'] != 2)
-      {
+       if(!request_confirmed('deleteconfirm', $_POST))
+       {
 	 echo "You must select 'Yes' from the confirmation pull down option.";
 	 exit;
       }
@@ -182,7 +144,7 @@
          exit;
       }
 
-      dbquery("DELETE FROM ingredients WHERE id = '$ingredientid'", $dbh) or die("Error deleting record: " . db_error());
+       dbquery_prepared("DELETE FROM ingredients WHERE id = ?", 'i', array($ingredientid), $dbh) or die("Error deleting record: " . db_error());
       echo "Ingredient deleted.<BR>";
       if($returnrecipe)
          echo "<A HREF='editrecipe.php?recipeid=$returnrecipe'>&gt; Return to recipe editor &lt;</A><BR>";
@@ -190,131 +152,97 @@
       exit;
    }
    
-   if($ndurl)
+   $ndfoodid = request_int('ndfoodid', 0, $_POST);
+   $usda_api_key = usda_api_key();
+
+   if($ndfoodid)
    {
-      echo "Copying from nutritiondata.com...<br>\n";
-      $ndfound = true;
-      $ndvolfound = true;
-      $namefound = true;
-
-      $ndata = file_get_contents($ndurl);
-      if(preg_match("/1 cup.*\((.*)g\)/i", $ndata, $matches))
-	 $ounces_cup = $matches[1] / 28.3495231;
-      elseif(preg_match("/1 tbsp.*\((.*)g\)/i", $ndata, $matches))
-	 $ounces_cup = $matches[1] / 28.3495231 * 16;
-      elseif(preg_match("/1 tsp.*\((.*)g\)/i", $ndata, $matches))
-	 $ounces_cup = $matches[1] / 28.3495231 * 48;
-      else
-	 $ndvolfound = false;
-
-      if(!isset($_POST['recipeid']) || !$_POST['recipeid'])
+      if(!$usda_api_key)
       {
-	 if(preg_match("/<h1>(.*)<\/h1>/", $ndata, $matches))
-	 {
-	    $nametext = " * Copied from nutritiondata.com.";
-	    $name = $matches[1];
-	 }
-	 else
-	 {
-	    $namefound = false;
-	    $nametext = " * !Name NOT FOUND!";
-	 }
+         $ndtext = " * USDA lookup is not configured. Add an API key or enter nutrition manually.";
       }
       else
-	 $nametext = "";
-
-
-      if(preg_match("/ NUTRIENT_0:\"([0-9\.]*)\",/", $ndata, $matches))
-         $calories = $matches[1];
-      else
-         $ndfound = false;
-
-      if(preg_match("/ NUTRIENT_4:\"([0-9\.]*)\",/", $ndata, $matches))
-         $carbs = $matches[1];
-      else
-         $carbs = 0;
-
-      if(preg_match("/ NUTRIENT_5:\"([0-9\.]*)\",/", $ndata, $matches))
-         $fiber = $matches[1];
-      else
-         $fiber = 0;
-      if(preg_match("/ NUTRIENT_14:\"([0-9\.]*)\",/", $ndata, $matches))
-         $fat = $matches[1];
-      else
-         $fat = 0;
-      if(preg_match("/ NUTRIENT_77:\"([0-9\.]*)\",/", $ndata, $matches))
-         $protein = $matches[1];
-      else
-         $protein = 0;
-
-      if(!$ndfound)
-         $ndtext = " * !Nutrition data NOT FOUND!";
-      else
       {
-         $serving_size = 100;
-         $ndtext = " * Copied from nutritiondata.com.";
+         $food = usda_get_food($ndfoodid);
+         if($food)
+         {
+            $nutrients = usda_extract_nutrients($food);
+            if(!$ingredientid && isset($food['description']))
+            {
+               $name = $food['description'];
+               $nametext = " * Copied from USDA FoodData Central.";
+            }
+            $calories = $nutrients['calories'];
+            $carbs = $nutrients['carbs'];
+            $fat = $nutrients['fat'];
+            $protein = $nutrients['protein'];
+            $fiber = $nutrients['fiber'];
+            if(isset($food['servingSize']) && $food['servingSize'] > 0)
+               $serving_size = $food['servingSize'];
+            elseif(!$serving_size)
+               $serving_size = 100;
+            $ndtext = " * Copied from USDA FoodData Central.";
+            $voltext = " * Volume data is not available from USDA; enter manually if needed.";
+         }
+         else
+         {
+            $ndtext = " * USDA nutrition data not found.";
+         }
       }
-
-      if(!$ndvolfound)
-         $voltext = " * !Volume data NOT FOUND!";
-      else
-         $voltext = " * Copied from nutritiondata.com.";
    }
 
    if($ndlookup)
    {
-      $i = 0;
-      $name = $_POST['name'];
-      $ndname = urlencode($name);
-      $ndata = file_get_contents('http://www.nutritiondata.com/foods-' . $ndname . '000000000000000000000.html');
-      if(preg_match_all('/<a href="(.*)" class="list">(.*)<\/a>/', $ndata, $matches))
+      $name = request_value('name', '', $_POST);
+      if(!$usda_api_key)
       {
+         $ndtext = " * USDA lookup is not configured. Add an API key or enter nutrition manually.";
+      }
+      else
+      {
+         $search_results = usda_search_foods($name);
+         if($search_results && isset($search_results['foods']) && count($search_results['foods']) > 0)
+         {
 ?>
 <TABLE cellpadding=1 cellspacing=0 border=1>
 <?php
-          foreach($matches[1] as $url)
-         {
-            $url = 'http://www.nutritiondata.com' . $url;
-            echo '<tr><td><form method="post"><INPUT TYPE="HIDDEN" NAME="ingredientid" VALUE="' . $ingredientid . '"><input type="hidden" name="ndurl" value="' . $url . '"><input type="submit" name="ndcopy" value="Copy"><td><a href="' . $url . '">' . $matches[2][$i] . "</a></form>\n";
-            $i++;
-         }
+            foreach($search_results['foods'] as $food)
+            {
+               $description = isset($food['description']) ? $food['description'] : 'Unknown';
+               $fdc_id = isset($food['fdcId']) ? $food['fdcId'] : 0;
+               echo '<tr><td><form method="post"><INPUT TYPE="HIDDEN" NAME="ingredientid" VALUE="' . h($ingredientid) . '"><INPUT TYPE="HIDDEN" NAME="ndfoodid" VALUE="' . h($fdc_id) . '"><input type="submit" name="ndcopy" value="Copy"><td>' . h($description) . "</form>\n";
+            }
 ?>
 </table>
 <?php
-      }
-      else
-         echo 'No matches found at: <a href="http://www.nutritiondata.com/foods-' . $ndname . '000000000000000000000.html">http://www.nutritiondata.com/foods-' . $ndname . '000000000000000000000.html<br>';
-
-
-   }
+         }
+         else
+         {
+            $ndtext = " * No USDA matches found. Enter nutrition manually.";
+         }
+       }
+    }
 
 ?>
-<HTML>
-<HEAD>
-<TITLE>Ingredient Editor</TITLE>
-</script>
-</HEAD>
-<BODY onload="document.form1.name.focus()">
-<H2><CENTER>Editing ingredient: <?php echo "$name" ?></CENTER></H2>
+<?php render_page_start('Ingredient Editor', 'Ingredient Editor', 'Edit Ingredient'); ?>
 <?php
    if($returnrecipe)
    {
-      echo "<A HREF='editrecipe.php?recipeid=$returnrecipe&scrollto=ingredient'>&gt; Return to recipe's editor &lt;</A><BR>";
-      echo "<A HREF='editrecipeingredients.php?recipeid=$returnrecipe&scrollto=ingredient'>&gt; Return to recipe's ingredient editor &lt;</A><BR>";
+      echo "<section class=\"card\"><A HREF='editrecipe.php?recipeid=$returnrecipe&scrollto=ingredient'>Return to recipe's editor</A><BR>";
+      echo "<A HREF='editrecipeingredients.php?recipeid=$returnrecipe&scrollto=ingredient'>Return to recipe's ingredient editor</A></section>";
    }
    else
-      echo "<A HREF=\"ingredients.php\">&gt; Back to Search Page &lt;</A><BR>";
+      echo "<section class=\"card\"><A HREF=\"ingredients.php\">Back to Search Page</A></section>";
 ?>
-<P>
+<section class="card">
 <FORM NAME="ndform" METHOD="POST">
 <INPUT TYPE="HIDDEN" NAME="ingredientid" VALUE="<?php echo $ingredientid?>">
-Copy nutrition data from: <INPUT TYPE="TEXT" NAME="ndurl" VALUE="<?php echo $ndurl?>" ID="name" SIZE=70>
-<INPUT TYPE="SUBMIT" NAME="ndcopy" VALUE="Copy">
+USDA FoodData Central lookup requires a local API key. Enter nutrition manually if no key is configured.
 </FORM>
 <FORM NAME="form1" METHOD="POST">
-   <TABLE>
+   <TABLE class="form-table">
    <TR><TD>Name:            <TD><INPUT TYPE="TEXT" NAME="name" VALUE="<?php echo $name?>" ID="name" SIZE=70> <?php echo $nametext?>
-   <TR><TD>                 <TD><INPUT TYPE="SUBMIT" NAME="ndlookup" VALUE="Look up on nutritiondata.com"> <!--onClick="javascript:window.open('http://www.nutritiondata.com/foods-' + escape(document.form1.name.value) + '000000000000000000000.html','blank','')">-->
+   <TR><TD>                 <TD><INPUT TYPE="SUBMIT" NAME="ndlookup" VALUE="Look up in USDA FoodData Central">
    <TR><TD>Size:            <TD><INPUT TYPE="TEXT" NAME="size" VALUE="<?php echo $size?>"><SELECT NAME="unit"><?php print_unit_options(2); ?></SELECT>
    <TR><TD>Cost:            <TD><INPUT TYPE="TEXT" NAME="cost" VALUE="<?php echo $cost?>">
    <TR><TD>Units/container: <TD><INPUT TYPE="TEXT" NAME="units" VALUE="<?php echo $units?>">
@@ -330,10 +258,12 @@ Copy nutrition data from: <INPUT TYPE="TEXT" NAME="ndurl" VALUE="<?php echo $ndu
 </TABLE></p>
 <?php if($returnrecipe) echo "<INPUT TYPE=\"HIDDEN\" NAME=\"returnrecipe\" VALUE=\"$returnrecipe\">"; ?>
 <INPUT TYPE="HIDDEN" NAME="ingredientid" VALUE="<?php echo $ingredientid?>">
-<INPUT TYPE="SUBMIT" NAME="save" VALUE="Save"><BR>
-<BR>
-<SELECT NAME="deleteconfirm"><OPTION VALUE="0">Delete?<OPTION VALUE="1">No<OPTION VALUE="2">Yes</SELECT>
+<div class="inline-actions">
+<INPUT TYPE="SUBMIT" NAME="save" VALUE="Save">
+<label><input type="checkbox" name="deleteconfirm" value="1"> Confirm delete</label>
 <INPUT TYPE="SUBMIT" NAME="delete" VALUE="Delete">
+</div>
 </FORM>
-</BODY>
-</HTML>
+</section>
+<script>document.form1.name.focus();</script>
+<?php render_page_end(); ?>

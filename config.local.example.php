@@ -7,3 +7,7 @@ $db_config = array(
    'username' => 'your_mysql_user',
    'password' => 'your_mysql_password',
 );
+
+$app_config = array(
+   'usda_api_key' => '',
+);
